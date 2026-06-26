@@ -4,15 +4,45 @@
 
 - No active sprint task captured yet.
 
+## Documentation Consistency Review Plan
+
+1. Compare the requested docs for contradictory requirements, duplicated rules, naming drift, folder structure drift, AI principle drift, terminology drift, and outdated references.
+2. Make only minimal edits that align the docs with the established Next.js, Prisma, PostgreSQL, agency-tenant, and human-reviewed AI direction.
+3. Re-read changed sections and summarize consistency fixes.
+
+## README Documentation Plan
+
+1. Use `AGENTS.md`, `PRD.md`, `DESIGN.md`, `tools.md`, and `architecture-checklist.md` as the source of truth.
+2. Draft the README with the requested structure, documented MVP scope, stack, commands, AI principles, workflow, and documentation links.
+3. Review the Markdown for concise B2B SaaS tone, no unsupported functionality, and consistency with project terminology.
+
+## Tools Documentation Plan
+
+1. Use `AGENTS.md`, `PRD.md`, `DESIGN.md`, `architecture-checklist.md`, and `README.md` if present as the source of truth.
+2. Replace the stale root `tools.md` deliverable content with the requested tools and standards reference.
+3. Review the Markdown for concise wording, project terminology, and consistency with tenant, AI, and data collection rules.
+
+## Document Generation Plan
+
+1. Inspect the Word template structure and preserve its section order, tables, and formatting style.
+2. Draft all 13 required PRD sections from existing project material without unsupported statistics or market claims.
+3. Generate the `.docx`, render it for visual QA, and revise if layout issues appear.
+
 ## Implementation Plan
 
-1. Read `PRD.md`, `DESIGN.md`, `tools.md`, and project memory for readiness context.
-2. Check whether the problem, target user, features, architecture, acceptance criteria, assumptions, risks, and next build step are explicit and unambiguous.
-3. Identify and rewrite the weakest PRD section directly in `PRD.md`.
-4. Create `architecture-checklist.md` listing the gaps closed and remaining build-readiness checks.
+1. Preserve the Scandinavian-inspired calm analyst workspace direction while making the visual point of view more specific.
+2. Strengthen layout, typography, palette, motion, component, accessibility, and quality-gate rules for dashboard and reporting screens.
+3. Add explicit anti-patterns against generic AI dashboard design, glassmorphism, purple gradients, restaurant-themed visuals, and banned marketing buzzwords.
+4. Review the revised spec for concise Lovable usability and consistency with `AGENTS.md` and `PRD.md`.
 
 ## Completed
 
+- 2026-06-26: Reviewed project documentation for consistency and aligned README, PRD, DESIGN, and tools wording for structure, workflow, AI review, tenant context, and background jobs.
+- 2026-06-26: Created a concise professional `README.md` for the Restaurant Intelligence Platform from `AGENTS.md`, `PRD.md`, `DESIGN.md`, `tools.md`, and `architecture-checklist.md`.
+- 2026-06-26: Replaced root `tools.md` with a concise project tools reference covering the stack, AI services, tenant model, jobs, hosting, commands, testing, data collection rules, coding standards, and AI agent context.
+- 2026-06-26: Lightly revised `PRD_RestaurantIntelligencePlatform_v1.docx` with a Primary MVP hypothesis, end-to-end success metric, stronger human-review language for AI insights, and a clean 7-page render preview.
+- 2026-06-26: Created `PRD_RestaurantIntelligencePlatform_v1.docx` from `PRD_TEMPLATE.docx` using available project files, then rendered and reviewed the 7-page DOCX. `PROJECT_PROGRESS.md` was requested but was not present in the workspace or nearby searched directories.
+- 2026-06-26: Improved `DESIGN.md` into a concise Lovable-ready product design spec with stronger visual direction, component standards, layout rules, motion guidance, quality gates, and anti-patterns.
 - 2026-06-26: Completed Run Loop L01 readiness audit on `PRD.md`, rewrote the weakest platform architecture section, and created `architecture-checklist.md`.
 - 2026-06-26: Created root-level `skill.md` for the `review-insight-brief` reusable skill.
 - 2026-06-26: Designed the Session 9 `Review Insight Analyst Agent` deliverable in `tools.md`.

@@ -33,7 +33,7 @@ Use a clean, modern, Scandinavian-inspired SaaS interface with high contrast tex
 
 Sign In: centered panel with product name, email/password fields, Google sign-in button, error message area, and legal text.
 
-Agency Home: fixed left sidebar with logo, Clients, Reviews, Insights, Reports, Competitors, Settings; top bar with agency switch label, date range control, and user menu. Main area has KPI cards, a sentiment trend chart, “Needs review” insight list, and a searchable client table.
+Agency Home: fixed left sidebar with logo, Clients, Reviews, Insights, Reports, Competitors, Settings; top bar with active agency label, date range control, and user menu. Main area has KPI cards, a sentiment trend chart, “Needs review” insight list, and a searchable client table.
 
 Client Dashboard: header with client name, location count, source coverage, and export button. Body has rating trend line chart, review volume bar chart, sentiment split, top themes, recent reviews, and competitor summary.
 
