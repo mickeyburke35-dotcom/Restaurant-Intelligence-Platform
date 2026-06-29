@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Prisma Initial Migration Plan
+
+1. Use the documented `.env.example` `DATABASE_URL` for all Prisma commands.
+2. Run `npx prisma validate`, then `npx prisma generate`, then `npx prisma migrate dev --name init`.
+3. Stop and document local PostgreSQL setup if the configured database is not available, without changing architecture or unrelated files.
+4. Record the completed migration outcome in this todo file.
+
 ## Prisma Data Model Plan
 
 1. Model the v1 agency-scoped entities in `prisma/schema.prisma` only, using UUID primary keys, timestamps, foreign keys, enums, and indexes.
@@ -65,6 +72,10 @@
 2. Strengthen layout, typography, palette, motion, component, accessibility, and quality-gate rules for dashboard and reporting screens.
 3. Add explicit anti-patterns against generic AI dashboard design, glassmorphism, purple gradients, restaurant-themed visuals, and banned marketing buzzwords.
 4. Review the revised spec for concise Lovable usability and consistency with `AGENTS.md` and `PRD.md`.
+
+## Blocked
+
+- 2026-06-29: Initial Prisma migration is blocked because local PostgreSQL is not reachable at the documented `.env.example` URL. `npx prisma validate` and `npx prisma generate` passed with the documented `DATABASE_URL`; `npx prisma migrate dev --name init` failed before creating a migration, and a localhost port check found no listener on port 5432.
 
 ## Completed
 
