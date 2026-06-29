@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## Managed Agent Blueprint Plan
+
+1. Use `AGENTS.md`, `PRD.md`, `DESIGN.md`, `tools.md`, and `AI_BEHAVIOUR.md` as the source of truth.
+2. Create `AGENT_BLUEPRINT.md` for the Review Insight Analyst Agent using the requested managed-agent structure.
+3. Verify the blueprint stays concise, evidence-led, and free of invented review data, metrics, market claims, or competitor information.
+
 ## AI Behaviour Specification Plan
 
 1. Document the requested Review Insight Generation behavior using the provided section structure.
@@ -43,6 +49,7 @@
 
 ## Completed
 
+- 2026-06-29: Created `AGENT_BLUEPRINT.md` for the Review Insight Analyst Agent managed blueprint, covering purpose, managed-agent instructions, Review Insight Generation capability, tool permissions, allowed sources, closed network policy, output requirements, and approval gates.
 - 2026-06-29: Created `AI_BEHAVIOUR.md` documenting Review Insight Generation behavior, including trigger, inputs, AI processing, draft insight card outputs, backend service location, success criteria, and Session 11 Stitch PNG design evidence.
 - 2026-06-26: Reviewed project documentation for consistency and aligned README, PRD, DESIGN, and tools wording for structure, workflow, AI review, tenant context, and background jobs.
 - 2026-06-26: Created a concise professional `README.md` for the Restaurant Intelligence Platform from `AGENTS.md`, `PRD.md`, `DESIGN.md`, `tools.md`, and `architecture-checklist.md`.
