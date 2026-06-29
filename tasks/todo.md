@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## Initial Application Scaffold Plan
+
+1. Create the requested Next.js App Router directory structure and placeholder files for empty project areas.
+2. Add TypeScript, Tailwind CSS, ESLint, Prisma, PostgreSQL, and Zod configuration without business features.
+3. Verify the scaffold with install, lint, typecheck, Prisma generation, and build when the local environment allows, then record completion notes.
+
 ## Session 12 Canonical Repository Structure Plan
 
 1. Use the existing project documents as source of truth for the missing canonical repository docs.
@@ -55,6 +61,7 @@
 
 ## Completed
 
+- 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
 - 2026-06-29: Created `AGENT_BLUEPRINT.md` for the Review Insight Analyst Agent managed blueprint, covering purpose, managed-agent instructions, Review Insight Generation capability, tool permissions, allowed sources, closed network policy, output requirements, and approval gates.
 - 2026-06-29: Created `AI_BEHAVIOUR.md` documenting Review Insight Generation behavior, including trigger, inputs, AI processing, draft insight card outputs, backend service location, success criteria, and Session 11 Stitch PNG design evidence.
