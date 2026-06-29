@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## Session 12 Canonical Repository Structure Plan
+
+1. Use the existing project documents as source of truth for the missing canonical repository docs.
+2. Create `ARCHITECTURE.md`, `SUBMISSION.md`, and placeholder files for `src/`, `public/`, and `evidence/`.
+3. Verify only the requested files were added or updated, then record a completion note.
+
 ## Managed Agent Blueprint Plan
 
 1. Use `AGENTS.md`, `PRD.md`, `DESIGN.md`, `tools.md`, and `AI_BEHAVIOUR.md` as the source of truth.
@@ -49,6 +55,7 @@
 
 ## Completed
 
+- 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
 - 2026-06-29: Created `AGENT_BLUEPRINT.md` for the Review Insight Analyst Agent managed blueprint, covering purpose, managed-agent instructions, Review Insight Generation capability, tool permissions, allowed sources, closed network policy, output requirements, and approval gates.
 - 2026-06-29: Created `AI_BEHAVIOUR.md` documenting Review Insight Generation behavior, including trigger, inputs, AI processing, draft insight card outputs, backend service location, success criteria, and Session 11 Stitch PNG design evidence.
 - 2026-06-26: Reviewed project documentation for consistency and aligned README, PRD, DESIGN, and tools wording for structure, workflow, AI review, tenant context, and background jobs.
