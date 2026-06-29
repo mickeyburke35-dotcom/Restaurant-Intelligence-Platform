@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## AI Behaviour Specification Plan
+
+1. Document the requested Review Insight Generation behavior using the provided section structure.
+2. Keep the specification aligned with source-linked AI output, confidence labeling, and human approval rules.
+3. Add a completion note after verifying the new file and todo update.
+
 ## Documentation Consistency Review Plan
 
 1. Compare the requested docs for contradictory requirements, duplicated rules, naming drift, folder structure drift, AI principle drift, terminology drift, and outdated references.
@@ -37,6 +43,7 @@
 
 ## Completed
 
+- 2026-06-29: Created `AI_BEHAVIOUR.md` documenting Review Insight Generation behavior, including trigger, inputs, AI processing, draft insight card outputs, backend service location, success criteria, and Session 11 Stitch PNG design evidence.
 - 2026-06-26: Reviewed project documentation for consistency and aligned README, PRD, DESIGN, and tools wording for structure, workflow, AI review, tenant context, and background jobs.
 - 2026-06-26: Created a concise professional `README.md` for the Restaurant Intelligence Platform from `AGENTS.md`, `PRD.md`, `DESIGN.md`, `tools.md`, and `architecture-checklist.md`.
 - 2026-06-26: Replaced root `tools.md` with a concise project tools reference covering the stack, AI services, tenant model, jobs, hosting, commands, testing, data collection rules, coding standards, and AI agent context.
