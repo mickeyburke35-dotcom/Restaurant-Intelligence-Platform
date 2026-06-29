@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## Faculty Collaborator Invite Check Plan
+
+1. Check repository evidence for collaborator invitation status.
+2. Mark `SUBMISSION.md` complete only if the collaborator invite has been sent.
+3. Add a short completion note to this file.
+
 ## Submission Checklist Update Plan
 
 1. Use the current repository state and requested submission status as the source of truth.
@@ -85,6 +91,7 @@
 
 ## Completed
 
+- 2026-06-29: Checked available repository evidence for the faculty collaborator invite; no sent invite was verified, so `SUBMISSION.md` keeps the item unchecked with an explicit status note.
 - 2026-06-29: Updated `SUBMISSION.md` for Deliverable 2 status, checked the canonical folders, README, branch, Codex connection, `d2-ready` tag, and repository link items per the requested submission status, replaced the GitHub suspension note with the restored `mickeyburke35-dotcom` account status, and left only "Faculty invited as collaborators" incomplete.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
