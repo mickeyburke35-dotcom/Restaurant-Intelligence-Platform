@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## Submission Checklist Update Plan
+
+1. Use the current repository state and requested submission status as the source of truth.
+2. Update only `SUBMISSION.md` for checklist and GitHub status changes.
+3. Record the completion note in this todo file after verifying the final checklist.
+
 ## Prisma Initial Migration Plan
 
 1. Use the documented `.env.example` `DATABASE_URL` for all Prisma commands.
@@ -79,6 +85,7 @@
 
 ## Completed
 
+- 2026-06-29: Updated `SUBMISSION.md` for Deliverable 2 status, checked the canonical folders, README, branch, Codex connection, `d2-ready` tag, and repository link items per the requested submission status, replaced the GitHub suspension note with the restored `mickeyburke35-dotcom` account status, and left only "Faculty invited as collaborators" incomplete.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
