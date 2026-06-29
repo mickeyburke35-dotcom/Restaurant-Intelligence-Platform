@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Prisma Data Model Plan
+
+1. Model the v1 agency-scoped entities in `prisma/schema.prisma` only, using UUID primary keys, timestamps, foreign keys, enums, and indexes.
+2. Preserve tenant isolation with mapped `agency_id` columns on every business-data model and evidence link.
+3. Store AI insights separately from raw reviews, require source-review traceability, and include human approval status fields.
+4. Validate the Prisma schema without writing migrations, then record completion notes.
+
 ## Initial Application Scaffold Plan
 
 1. Create the requested Next.js App Router directory structure and placeholder files for empty project areas.
@@ -61,6 +68,7 @@
 
 ## Completed
 
+- 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
 - 2026-06-29: Created `AGENT_BLUEPRINT.md` for the Review Insight Analyst Agent managed blueprint, covering purpose, managed-agent instructions, Review Insight Generation capability, tool permissions, allowed sources, closed network policy, output requirements, and approval gates.

@@ -6,3 +6,610 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum AgencyPlan {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum AgencyStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  DELETED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MANAGER
+  ANALYST
+  VIEWER
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum RestaurantStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum LocationStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+  ARCHIVED
+}
+
+enum ReviewSourceType {
+  GOOGLE_BUSINESS_PROFILE
+  YELP_FUSION
+  TRIPADVISOR
+  FACEBOOK
+  CSV_IMPORT
+  MANUAL_ENTRY
+  PARTNER_API
+  OTHER
+}
+
+enum SourceApprovalStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ReviewSourceConnectionStatus {
+  NOT_CONNECTED
+  CONNECTED
+  SYNCING
+  PAUSED
+  ERROR
+  DISCONNECTED
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  MIXED
+  UNKNOWN
+}
+
+enum InsightType {
+  REVIEW_SUMMARY
+  SENTIMENT_TREND
+  THEME
+  RISK
+  OPPORTUNITY
+  COMPETITOR_COMPARISON
+  RECOMMENDATION
+  REPORT_NARRATIVE
+}
+
+enum ConfidenceLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum InsightStatus {
+  DRAFT
+  NEEDS_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum CompetitorStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum CompetitorObservationType {
+  RATING_SNAPSHOT
+  REVIEW_VOLUME
+  REVIEW_THEME
+  MENU_CHANGE
+  PRICING_SIGNAL
+  PROMOTION
+  HOURS_CHANGE
+  MARKET_NOTE
+  OTHER
+}
+
+enum ReportFormat {
+  PDF
+  CSV
+}
+
+enum ReportStatus {
+  DRAFT
+  QUEUED
+  GENERATING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum ScheduledJobType {
+  REVIEW_SYNC
+  COMPETITOR_OBSERVATION_SYNC
+  INSIGHT_GENERATION
+  REPORT_GENERATION
+  SOURCE_HEALTH_CHECK
+  DATA_RETENTION
+}
+
+enum ScheduledJobStatus {
+  SCHEDULED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PAUSED
+  CANCELLED
+}
+
+enum AuditEntityType {
+  AGENCY
+  USER
+  MEMBERSHIP
+  RESTAURANT
+  LOCATION
+  REVIEW_SOURCE
+  REVIEW
+  INSIGHT
+  COMPETITOR
+  COMPETITOR_OBSERVATION
+  REPORT
+  SCHEDULED_JOB
+}
+
+model Agency {
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String       @unique
+  plan      AgencyPlan   @default(STARTER)
+  status    AgencyStatus @default(ACTIVE)
+  settings  Json?
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  deletedAt DateTime?    @map("deleted_at")
+
+  memberships            Membership[]
+  restaurants            Restaurant[]
+  locations              Location[]
+  reviewSources          ReviewSource[]
+  reviews                Review[]
+  insights               Insight[]
+  insightSourceReviews   InsightSourceReview[]
+  competitors            Competitor[]
+  competitorObservations CompetitorObservation[]
+  reports                Report[]
+  scheduledJobs          ScheduledJob[]
+  auditLogs              AuditLog[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@map("agencies")
+}
+
+model User {
+  id             String       @id @default(uuid()) @db.Uuid
+  email          String       @unique
+  name           String?
+  authProvider   AuthProvider @default(EMAIL) @map("auth_provider")
+  externalAuthId String?      @map("external_auth_id")
+  status         UserStatus   @default(ACTIVE)
+  lastSignInAt   DateTime?    @map("last_sign_in_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  deletedAt      DateTime?    @map("deleted_at")
+
+  memberships           Membership[] @relation("MembershipUser")
+  sentMembershipInvites Membership[] @relation("MembershipInvitedBy")
+  createdInsights       Insight[]    @relation("InsightCreatedBy")
+  reviewedInsights      Insight[]    @relation("InsightReviewedBy")
+  createdReports        Report[]     @relation("ReportCreatedBy")
+  auditLogs             AuditLog[]   @relation("AuditLogUser")
+
+  @@unique([authProvider, externalAuthId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Membership {
+  id              String           @id @default(uuid()) @db.Uuid
+  agencyId        String           @map("agency_id") @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  invitedByUserId String?          @map("invited_by_user_id") @db.Uuid
+  restaurantId    String?          @map("restaurant_id") @db.Uuid
+  role            MembershipRole   @default(VIEWER)
+  status          MembershipStatus @default(INVITED)
+  invitedAt       DateTime?        @map("invited_at")
+  acceptedAt      DateTime?        @map("accepted_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  deletedAt       DateTime?        @map("deleted_at")
+
+  agency     Agency      @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  user       User        @relation("MembershipUser", fields: [userId], references: [id], onDelete: Restrict)
+  invitedBy  User?       @relation("MembershipInvitedBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  restaurant Restaurant? @relation(fields: [restaurantId, agencyId], references: [id, agencyId], onDelete: Restrict)
+
+  @@unique([agencyId, userId])
+  @@index([agencyId, role, status])
+  @@index([agencyId, restaurantId])
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("memberships")
+}
+
+model Restaurant {
+  id         String           @id @default(uuid()) @db.Uuid
+  agencyId   String           @map("agency_id") @db.Uuid
+  name       String
+  slug       String
+  segment    String?
+  cuisine    String?
+  websiteUrl String?          @map("website_url") @db.VarChar(2048)
+  notes      String?          @db.Text
+  status     RestaurantStatus @default(ACTIVE)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+  deletedAt  DateTime?        @map("deleted_at")
+
+  agency        Agency         @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  memberships   Membership[]
+  locations     Location[]
+  reviewSources ReviewSource[]
+  reviews       Review[]
+  insights      Insight[]
+  competitors   Competitor[]
+  reports       Report[]
+  scheduledJobs ScheduledJob[]
+
+  @@unique([id, agencyId])
+  @@unique([agencyId, slug])
+  @@index([agencyId, status])
+  @@index([agencyId, deletedAt])
+  @@map("restaurants")
+}
+
+model Location {
+  id           String         @id @default(uuid()) @db.Uuid
+  agencyId     String         @map("agency_id") @db.Uuid
+  restaurantId String         @map("restaurant_id") @db.Uuid
+  name         String
+  addressLine1 String?        @map("address_line_1")
+  addressLine2 String?        @map("address_line_2")
+  city         String?
+  region       String?
+  postalCode   String?        @map("postal_code")
+  country      String         @default("US")
+  timezone     String         @default("America/New_York")
+  latitude     Decimal?       @db.Decimal(9, 6)
+  longitude    Decimal?       @db.Decimal(9, 6)
+  status       LocationStatus @default(ACTIVE)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  deletedAt    DateTime?      @map("deleted_at")
+
+  agency        Agency         @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  restaurant    Restaurant     @relation(fields: [restaurantId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  reviewSources ReviewSource[]
+  reviews       Review[]
+  insights      Insight[]
+  competitors   Competitor[]
+  reports       Report[]
+  scheduledJobs ScheduledJob[]
+
+  @@unique([id, agencyId])
+  @@unique([agencyId, restaurantId, name])
+  @@index([agencyId, restaurantId, status])
+  @@index([agencyId, city, region])
+  @@index([agencyId, deletedAt])
+  @@map("locations")
+}
+
+model ReviewSource {
+  id                 String                       @id @default(uuid()) @db.Uuid
+  agencyId           String                       @map("agency_id") @db.Uuid
+  restaurantId       String?                      @map("restaurant_id") @db.Uuid
+  locationId         String?                      @map("location_id") @db.Uuid
+  name               String
+  sourceType         ReviewSourceType             @map("source_type")
+  approvalStatus     SourceApprovalStatus         @default(PENDING_REVIEW) @map("approval_status")
+  connectionStatus   ReviewSourceConnectionStatus @default(NOT_CONNECTED) @map("connection_status")
+  externalAccountId  String?                      @map("external_account_id")
+  externalLocationId String?                      @map("external_location_id")
+  permissionNotes    String?                      @map("permission_notes") @db.Text
+  lastSyncAt         DateTime?                    @map("last_sync_at")
+  nextSyncAt         DateTime?                    @map("next_sync_at")
+  lastError          String?                      @map("last_error") @db.Text
+  createdAt          DateTime                     @default(now()) @map("created_at")
+  updatedAt          DateTime                     @updatedAt @map("updated_at")
+  deletedAt          DateTime?                    @map("deleted_at")
+
+  agency        Agency         @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  restaurant    Restaurant?    @relation(fields: [restaurantId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  location      Location?      @relation(fields: [locationId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  reviews       Review[]
+  scheduledJobs ScheduledJob[]
+
+  @@unique([id, agencyId])
+  @@unique([agencyId, sourceType, externalLocationId])
+  @@index([agencyId, restaurantId])
+  @@index([agencyId, locationId])
+  @@index([agencyId, sourceType, connectionStatus])
+  @@index([agencyId, approvalStatus])
+  @@index([agencyId, deletedAt])
+  @@map("review_sources")
+}
+
+model Review {
+  id                    String    @id @default(uuid()) @db.Uuid
+  agencyId              String    @map("agency_id") @db.Uuid
+  restaurantId          String    @map("restaurant_id") @db.Uuid
+  locationId            String    @map("location_id") @db.Uuid
+  reviewSourceId        String    @map("review_source_id") @db.Uuid
+  externalId            String    @map("external_id")
+  rating                Decimal?  @db.Decimal(3, 2)
+  title                 String?
+  text                  String?   @db.Text
+  language              String?
+  sentiment             Sentiment @default(UNKNOWN)
+  sentimentScore        Decimal?  @map("sentiment_score") @db.Decimal(5, 4)
+  themes                String[]  @default([])
+  authorDisplayNameHash String?   @map("author_display_name_hash")
+  reviewUrl             String?   @map("review_url") @db.VarChar(2048)
+  sourcePayloadHash     String?   @map("source_payload_hash")
+  metadata              Json?
+  publishedAt           DateTime  @map("published_at")
+  collectedAt           DateTime  @default(now()) @map("collected_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  deletedAt             DateTime? @map("deleted_at")
+
+  agency               Agency                @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  restaurant           Restaurant            @relation(fields: [restaurantId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  location             Location              @relation(fields: [locationId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  reviewSource         ReviewSource          @relation(fields: [reviewSourceId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  insightSourceReviews InsightSourceReview[]
+
+  @@unique([id, agencyId])
+  @@unique([agencyId, reviewSourceId, externalId])
+  @@index([agencyId, restaurantId, publishedAt])
+  @@index([agencyId, locationId, publishedAt])
+  @@index([agencyId, reviewSourceId])
+  @@index([agencyId, sentiment])
+  @@index([agencyId, rating])
+  @@index([agencyId, deletedAt])
+  @@map("reviews")
+}
+
+model Insight {
+  id                String           @id @default(uuid()) @db.Uuid
+  agencyId          String           @map("agency_id") @db.Uuid
+  restaurantId      String           @map("restaurant_id") @db.Uuid
+  locationId        String?          @map("location_id") @db.Uuid
+  createdByUserId   String?          @map("created_by_user_id") @db.Uuid
+  reviewedByUserId  String?          @map("reviewed_by_user_id") @db.Uuid
+  type              InsightType
+  title             String
+  summary           String           @db.Text
+  sentiment         Sentiment        @default(UNKNOWN)
+  themes            String[]         @default([])
+  confidence        Decimal?         @db.Decimal(5, 4)
+  confidenceLevel   ConfidenceLevel? @map("confidence_level")
+  model             String
+  promptVersion     String?          @map("prompt_version")
+  sourceReviewCount Int              @default(0) @map("source_review_count")
+  highImpact        Boolean          @default(false) @map("high_impact")
+  status            InsightStatus    @default(NEEDS_REVIEW)
+  reviewedAt        DateTime?        @map("reviewed_at")
+  reviewNotes       String?          @map("review_notes") @db.Text
+  generatedAt       DateTime         @default(now()) @map("generated_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  deletedAt         DateTime?        @map("deleted_at")
+
+  agency        Agency                @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  restaurant    Restaurant            @relation(fields: [restaurantId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  location      Location?             @relation(fields: [locationId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  createdBy     User?                 @relation("InsightCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reviewedBy    User?                 @relation("InsightReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  sourceReviews InsightSourceReview[]
+
+  @@unique([id, agencyId])
+  @@index([agencyId, restaurantId, status, createdAt])
+  @@index([agencyId, locationId])
+  @@index([agencyId, type])
+  @@index([agencyId, highImpact, status])
+  @@index([createdByUserId])
+  @@index([reviewedByUserId])
+  @@index([agencyId, deletedAt])
+  @@map("insights")
+}
+
+model InsightSourceReview {
+  id              String   @id @default(uuid()) @db.Uuid
+  agencyId        String   @map("agency_id") @db.Uuid
+  insightId       String   @map("insight_id") @db.Uuid
+  reviewId        String   @map("review_id") @db.Uuid
+  relevanceScore  Decimal? @map("relevance_score") @db.Decimal(5, 4)
+  evidenceExcerpt String?  @map("evidence_excerpt") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  agency  Agency  @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  insight Insight @relation(fields: [insightId, agencyId], references: [id, agencyId], onDelete: Cascade)
+  review  Review  @relation(fields: [reviewId, agencyId], references: [id, agencyId], onDelete: Restrict)
+
+  @@unique([insightId, reviewId])
+  @@index([agencyId, insightId])
+  @@index([agencyId, reviewId])
+  @@map("insight_source_reviews")
+}
+
+model Competitor {
+  id           String           @id @default(uuid()) @db.Uuid
+  agencyId     String           @map("agency_id") @db.Uuid
+  restaurantId String           @map("restaurant_id") @db.Uuid
+  locationId   String?          @map("location_id") @db.Uuid
+  name         String
+  sourceUrl    String?          @map("source_url") @db.VarChar(2048)
+  notes        String?          @db.Text
+  status       CompetitorStatus @default(ACTIVE)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  deletedAt    DateTime?        @map("deleted_at")
+
+  agency       Agency                  @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  restaurant   Restaurant              @relation(fields: [restaurantId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  location     Location?               @relation(fields: [locationId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  observations CompetitorObservation[]
+
+  @@unique([id, agencyId])
+  @@index([agencyId, restaurantId, status])
+  @@index([agencyId, locationId])
+  @@index([agencyId, deletedAt])
+  @@map("competitors")
+}
+
+model CompetitorObservation {
+  id           String                    @id @default(uuid()) @db.Uuid
+  agencyId     String                    @map("agency_id") @db.Uuid
+  competitorId String                    @map("competitor_id") @db.Uuid
+  signalType   CompetitorObservationType @map("signal_type")
+  value        String                    @db.Text
+  numericValue Decimal?                  @map("numeric_value") @db.Decimal(10, 2)
+  sourceUrl    String?                   @map("source_url") @db.VarChar(2048)
+  metadata     Json?
+  observedAt   DateTime                  @map("observed_at")
+  collectedAt  DateTime                  @default(now()) @map("collected_at")
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+  deletedAt    DateTime?                 @map("deleted_at")
+
+  agency     Agency     @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  competitor Competitor @relation(fields: [competitorId, agencyId], references: [id, agencyId], onDelete: Restrict)
+
+  @@index([agencyId, competitorId, observedAt])
+  @@index([agencyId, signalType, observedAt])
+  @@index([agencyId, deletedAt])
+  @@map("competitor_observations")
+}
+
+model Report {
+  id              String       @id @default(uuid()) @db.Uuid
+  agencyId        String       @map("agency_id") @db.Uuid
+  restaurantId    String       @map("restaurant_id") @db.Uuid
+  locationId      String?      @map("location_id") @db.Uuid
+  createdByUserId String       @map("created_by_user_id") @db.Uuid
+  title           String
+  format          ReportFormat
+  status          ReportStatus @default(DRAFT)
+  dateRangeStart  DateTime     @map("date_range_start")
+  dateRangeEnd    DateTime     @map("date_range_end")
+  approvedOnly    Boolean      @default(true) @map("approved_only")
+  filters         Json?
+  sections        Json?
+  fileUrl         String?      @map("file_url") @db.VarChar(2048)
+  storageKey      String?      @map("storage_key")
+  generatedAt     DateTime?    @map("generated_at")
+  failedAt        DateTime?    @map("failed_at")
+  failureReason   String?      @map("failure_reason") @db.Text
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  deletedAt       DateTime?    @map("deleted_at")
+
+  agency        Agency     @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  restaurant    Restaurant @relation(fields: [restaurantId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  location      Location?  @relation(fields: [locationId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  createdByUser User       @relation("ReportCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([agencyId, restaurantId, createdAt])
+  @@index([agencyId, locationId])
+  @@index([agencyId, status])
+  @@index([agencyId, dateRangeStart, dateRangeEnd])
+  @@index([createdByUserId])
+  @@index([agencyId, deletedAt])
+  @@map("reports")
+}
+
+model ScheduledJob {
+  id             String             @id @default(uuid()) @db.Uuid
+  agencyId       String             @map("agency_id") @db.Uuid
+  restaurantId   String?            @map("restaurant_id") @db.Uuid
+  locationId     String?            @map("location_id") @db.Uuid
+  reviewSourceId String?            @map("review_source_id") @db.Uuid
+  jobType        ScheduledJobType   @map("job_type")
+  status         ScheduledJobStatus @default(SCHEDULED)
+  schedule       String?
+  payload        Json?
+  lastRunAt      DateTime?          @map("last_run_at")
+  nextRunAt      DateTime?          @map("next_run_at")
+  lockedAt       DateTime?          @map("locked_at")
+  lockExpiresAt  DateTime?          @map("lock_expires_at")
+  lockedBy       String?            @map("locked_by")
+  failureCount   Int                @default(0) @map("failure_count")
+  lastError      String?            @map("last_error") @db.Text
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  deletedAt      DateTime?          @map("deleted_at")
+
+  agency       Agency        @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  restaurant   Restaurant?   @relation(fields: [restaurantId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  location     Location?     @relation(fields: [locationId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  reviewSource ReviewSource? @relation(fields: [reviewSourceId, agencyId], references: [id, agencyId], onDelete: Restrict)
+
+  @@index([agencyId, jobType, status])
+  @@index([nextRunAt, status])
+  @@index([agencyId, reviewSourceId])
+  @@index([agencyId, restaurantId])
+  @@index([agencyId, locationId])
+  @@index([agencyId, deletedAt])
+  @@map("scheduled_jobs")
+}
+
+model AuditLog {
+  id            String          @id @default(uuid()) @db.Uuid
+  agencyId      String          @map("agency_id") @db.Uuid
+  userId        String?         @map("user_id") @db.Uuid
+  action        String
+  entityType    AuditEntityType @map("entity_type")
+  entityId      String?         @map("entity_id") @db.Uuid
+  metadata      Json?
+  ipHash        String?         @map("ip_hash")
+  userAgentHash String?         @map("user_agent_hash")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  user   User?  @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId, createdAt])
+  @@index([agencyId, entityType, entityId])
+  @@index([agencyId, action])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
