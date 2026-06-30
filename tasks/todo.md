@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## Session 12 Agent Team Handoff Plan
+
+1. Create `AGENT_TEAM_HANDOFF.md` as a design-only course exercise document.
+2. Define the four PopStop agent roles, inputs, outputs, handoff order, 95/100 scoring gate, and final launch pack.
+3. Verify only the requested documentation files changed, then record completion.
+
 ## Faculty Collaborator Invite Check Plan
 
 1. Check repository evidence for collaborator invitation status.
@@ -91,6 +97,7 @@
 
 ## Completed
 
+- 2026-06-30: Created `AGENT_TEAM_HANDOFF.md` documenting the Session 12 PopStop-style agent team handoff exercise, including agent roles, tasks, model reasoning levels, inputs, outputs, handoff order, 95/100 scoring gate, and final approved launch pack output.
 - 2026-06-29: Checked available repository evidence for the faculty collaborator invite; no sent invite was verified, so `SUBMISSION.md` keeps the item unchecked with an explicit status note.
 - 2026-06-29: Updated `SUBMISSION.md` for Deliverable 2 status, checked the canonical folders, README, branch, Codex connection, `d2-ready` tag, and repository link items per the requested submission status, replaced the GitHub suspension note with the restored `mickeyburke35-dotcom` account status, and left only "Faculty invited as collaborators" incomplete.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
