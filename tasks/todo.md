@@ -2,7 +2,32 @@
 
 ## Current Work
 
-- No active sprint task captured yet.
+- 2026-06-30: Update today's checklist from current repository evidence only.
+
+## Today's Checklist Update Plan
+
+1. Use repository files, installed skill folders, Git remote configuration, and Git history as the source of truth.
+2. Mark items complete only when there is clear local evidence.
+3. Leave account administration, contributor invites, uploads, domain setup, and unverified summary items unchecked.
+
+## Today's Checklist - 2026-06-30
+
+- [x] Finalise `ARCHITECTURE.md` (file exists and documents the canonical architecture).
+- [x] Finalise at least one specialist agent for my project (`AGENT_BLUEPRINT.md` exists for the Review Insight Analyst Agent).
+- [x] Install Copywriting skill (`.agents/skills/copywriting/SKILL.md` exists).
+- [x] Create account on GitHub (`SUBMISSION.md` records restored GitHub access for `mickeyburke35-dotcom`; Git remote uses that owner).
+- [x] Create a project repo (`origin` points to `https://github.com/mickeyburke35-dotcom/Restaurant-Intelligence-Platform.git`).
+- [ ] Add all team members as contributors (not verified from local repository state).
+- [ ] Add professor as contributor (`SUBMISSION.md` says the invite is not verified as sent).
+- [x] Create `README.md`.
+- [x] Connect GitHub to Codex (`SUBMISSION.md` records Codex connected; referenced screenshot is not present under `evidence/`).
+- [x] One team member commits `ARCHITECTURE.md` (Git history shows commit `30f9789`).
+- [ ] A different team member commits the specialist agent `.md` (not verified as a different contributor from local Git history).
+- [x] Generate static landing page (`app/page.tsx` provides the current static app shell).
+- [ ] Upload files to Google AI Studio (not verified from local repository state).
+- [ ] Upload files to at least one other tool (not verified from local repository state).
+- [ ] Get a domain for the project (not verified from local repository state).
+- [ ] Get a GitHub summary (no explicit GitHub summary artifact found).
 
 ## Codex Architecture Review Evidence Plan
 
