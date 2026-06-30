@@ -4,6 +4,14 @@
 
 - 2026-06-30: Update today's checklist from current repository evidence only.
 
+## Static Landing Page Implementation Plan
+
+1. Use `PRD.md`, `DESIGN.md`, `README.md`, `AGENTS.md`, and the copywriting skill for positioning, visual direction, and copy constraints.
+2. Add a new static marketing route at `app/landing/page.tsx` without replacing the existing app shell or changing architecture.
+3. Build the required sections: hero, problem, product workflow, AI trust, target users, CTA, and footer using the documented Scandinavian B2B SaaS palette and concrete evidence-led copy.
+4. Avoid banned language, restaurant-themed clichés, purple gradients, glassmorphism, invented statistics, unsupported claims, and architecture changes.
+5. Verify with `npm run lint`, `npm run typecheck`, and `npm run build`, then record completion notes.
+
 ## Today's Checklist Update Plan
 
 1. Use repository files, installed skill folders, Git remote configuration, and Git history as the source of truth.
@@ -135,6 +143,7 @@
 
 ## Completed
 
+- 2026-06-30: Created the static Restaurant Intelligence Platform landing page at `app/landing/page.tsx` with hero, problem, workflow, AI trust, target user, CTA, and footer sections; preserved the existing app shell and architecture; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-30: Created `evidence/codex-architecture-review.md` summarizing Codex architecture review Questions 1-4 with ranked missing components, top technical tasks, risk mitigations, and final implementation priorities; no application code was modified.
 - 2026-06-30: Created `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, and `ONBOARDING_FRICTION_REPORT.md` for Review Insight Generation reliability risks, end-to-end product evaluation scenarios, and first-time onboarding friction tracking; no app features, API routes, schema edits, dependencies, or unrelated files were changed.
 - 2026-06-30: Created `AGENT_TEAM_HANDOFF.md` documenting the Session 12 PopStop-style agent team handoff exercise, including agent roles, tasks, model reasoning levels, inputs, outputs, handoff order, 95/100 scoring gate, and final approved launch pack output.
