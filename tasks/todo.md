@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Reliability And Evaluation Documentation Plan
+
+1. Use `PRD.md`, `AI_BEHAVIOUR.md`, `AGENT_BLUEPRINT.md`, `ARCHITECTURE.md`, and `prisma/schema.prisma` as source of truth.
+2. Create `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, and `ONBOARDING_FRICTION_REPORT.md` in the project root only.
+3. Keep the work documentation-only: no app features, API routes, schema edits, dependencies, or unrelated files.
+4. Record completion after verifying the requested files and todo update.
+
 ## Session 12 Agent Team Handoff Plan
 
 1. Create `AGENT_TEAM_HANDOFF.md` as a design-only course exercise document.
@@ -97,6 +104,7 @@
 
 ## Completed
 
+- 2026-06-30: Created `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, and `ONBOARDING_FRICTION_REPORT.md` for Review Insight Generation reliability risks, end-to-end product evaluation scenarios, and first-time onboarding friction tracking; no app features, API routes, schema edits, dependencies, or unrelated files were changed.
 - 2026-06-30: Created `AGENT_TEAM_HANDOFF.md` documenting the Session 12 PopStop-style agent team handoff exercise, including agent roles, tasks, model reasoning levels, inputs, outputs, handoff order, 95/100 scoring gate, and final approved launch pack output.
 - 2026-06-29: Checked available repository evidence for the faculty collaborator invite; no sent invite was verified, so `SUBMISSION.md` keeps the item unchecked with an explicit status note.
 - 2026-06-29: Updated `SUBMISSION.md` for Deliverable 2 status, checked the canonical folders, README, branch, Codex connection, `d2-ready` tag, and repository link items per the requested submission status, replaced the GitHub suspension note with the restored `mickeyburke35-dotcom` account status, and left only "Faculty invited as collaborators" incomplete.
