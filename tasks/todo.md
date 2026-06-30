@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## Codex Architecture Review Evidence Plan
+
+1. Create `evidence/codex-architecture-review.md` summarizing Questions 1-4 from the repository architecture review.
+2. Keep the work documentation-only: no app code, API routes, schema edits, dependencies, or runtime configuration changes.
+3. Record completion after verifying the new evidence file and todo update.
+
 ## Reliability And Evaluation Documentation Plan
 
 1. Use `PRD.md`, `AI_BEHAVIOUR.md`, `AGENT_BLUEPRINT.md`, `ARCHITECTURE.md`, and `prisma/schema.prisma` as source of truth.
@@ -104,6 +110,7 @@
 
 ## Completed
 
+- 2026-06-30: Created `evidence/codex-architecture-review.md` summarizing Codex architecture review Questions 1-4 with ranked missing components, top technical tasks, risk mitigations, and final implementation priorities; no application code was modified.
 - 2026-06-30: Created `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, and `ONBOARDING_FRICTION_REPORT.md` for Review Insight Generation reliability risks, end-to-end product evaluation scenarios, and first-time onboarding friction tracking; no app features, API routes, schema edits, dependencies, or unrelated files were changed.
 - 2026-06-30: Created `AGENT_TEAM_HANDOFF.md` documenting the Session 12 PopStop-style agent team handoff exercise, including agent roles, tasks, model reasoning levels, inputs, outputs, handoff order, 95/100 scoring gate, and final approved launch pack output.
 - 2026-06-29: Checked available repository evidence for the faculty collaborator invite; no sent invite was verified, so `SUBMISSION.md` keeps the item unchecked with an explicit status note.
