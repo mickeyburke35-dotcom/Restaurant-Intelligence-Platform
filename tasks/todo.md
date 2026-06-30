@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Restaurant CRUD Implementation Plan
+
+1. Add focused server utilities for Prisma access, active agency resolution, restaurant validation, and tenant-scoped restaurant queries/actions.
+2. Build a restaurant list page with search/status filters, create and edit forms, and archive controls without adding locations, reviews, AI, or reports.
+3. Add tenant-scoped API route handlers for restaurant list, create, update, and archive operations with user-safe validation errors.
+4. Run lint, typecheck, and build, then record the implementation outcome.
+
 ## Prisma Initial Migration Plan
 
 1. Use the documented `.env.example` `DATABASE_URL` for all Prisma commands.
@@ -79,6 +86,7 @@
 
 ## Completed
 
+- 2026-06-30: Implemented Restaurant CRUD only: agency-scoped list/create/edit/archive UI, tenant-scoped API routes, Zod server-side validation, Prisma-backed soft-delete archive behavior, local active-agency context resolution, README API documentation, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
