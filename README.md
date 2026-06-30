@@ -133,8 +133,11 @@ npm test
 ```bash
 npx prisma generate
 npx prisma migrate dev
+npm run seed
 npx prisma studio
 ```
+
+`npm run seed` loads fictional demo agencies, users, restaurants, locations, approved review sources, public-review examples, and draft AI insights. Seeded restaurant and review records are for local development only and are not real restaurant data.
 
 ---
 

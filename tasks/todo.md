@@ -2,8 +2,24 @@
 
 ## Current Work
 
+- 2026-06-30: Fill out the AI Startup Validation Board from existing Restaurant Intelligence Platform documentation.
+- 2026-06-30: Implement database seeding for fictional Restaurant Intelligence Platform demo data.
 - 2026-06-30: Update today's checklist from current repository evidence only.
 - 2026-06-30: Implement authentication only for the Restaurant Intelligence Platform.
+
+## AI Startup Validation Board Plan
+
+1. Use only `README.md`, `PRD.md`, `DESIGN.md`, `ARCHITECTURE.md`, `AI_BEHAVIOUR.md`, `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, `ONBOARDING_FRICTION_REPORT.md`, and existing project memory as evidence.
+2. Complete the requested Validation Board sections without inventing customer statistics, market sizes, adoption rates, survey results, or unsupported claims.
+3. Keep the work documentation-only and avoid application code, architecture changes, dependency changes, schema edits, data-collection changes, or AI behavior changes.
+4. Record completion in this todo file after producing the final Markdown board.
+
+## Database Seed Implementation Plan
+
+1. Add `prisma/seed.ts` with idempotent fictional demo records for two isolated agencies, four users, role memberships, restaurants, locations, approved sources, reviews, and draft source-linked AI insights.
+2. Keep every business record tenant-scoped with `agency_id` and clearly mark review/source content as fictional seed data, not real restaurant data.
+3. Add a package seed command that runs through Prisma without introducing new dependencies.
+4. Verify the seed script runs successfully against the configured local database, then record the outcome.
 
 ## Authentication Implementation Plan
 
@@ -149,10 +165,13 @@
 
 ## Blocked
 
+- 2026-06-30: Full database seed execution is blocked by the configured `.env` database credentials. A network-approved `npm run seed` reached `aws-1-eu-west-2.pooler.supabase.com:6543`, but Prisma reported that the provided `postgres` credentials are not valid. No local PostgreSQL listener, PostgreSQL CLI, Docker, or Podman runtime is available in this workspace to verify against the documented local example database.
 - 2026-06-29: Initial Prisma migration is blocked because local PostgreSQL is not reachable at the documented `.env.example` URL. `npx prisma validate` and `npx prisma generate` passed with the documented `DATABASE_URL`; `npx prisma migrate dev --name init` failed before creating a migration, and a localhost port check found no listener on port 5432.
 
 ## Completed
 
+- 2026-06-30: Added idempotent fictional database seeding in `prisma/seed.ts` for 2 agencies, 4 users, Owner/Manager/Analyst/Viewer memberships, 4 restaurants, 8 locations, 8 approved fictional CSV review sources, 16 clearly fictional public reviews, and 4 draft AI insights linked to source reviews; added `npm run seed` and Prisma seed wiring in `package.json`; documented the seed command in `README.md`; added `dist/**` to ESLint ignores for transient seed build output; verified `npm run lint`, `npm run typecheck`, and `npx prisma validate`. Full seed write verification remains blocked by invalid configured database credentials.
+- 2026-06-30: Completed the AI Startup Validation Board for the Restaurant Intelligence Platform from existing project documentation only; no application code, architecture changes, dependency changes, schema edits, data-collection changes, AI behavior changes, or unrelated files were modified.
 - 2026-06-30: Implemented authentication only: database-backed email sign-in against active users and memberships, signed httpOnly session cookies, sign-out, session API, middleware-protected `/workspace`, active agency and role resolution, authentication layout, protected workspace status page, README auth route documentation, and `AUTH_SESSION_SECRET` in `.env.example`; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-30: Created the static Restaurant Intelligence Platform landing page at `app/landing/page.tsx` with hero, problem, workflow, AI trust, target user, CTA, and footer sections; preserved the existing app shell and architecture; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-30: Created `evidence/codex-architecture-review.md` summarizing Codex architecture review Questions 1-4 with ranked missing components, top technical tasks, risk mitigations, and final implementation priorities; no application code was modified.
