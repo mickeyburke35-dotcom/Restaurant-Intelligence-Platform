@@ -96,6 +96,8 @@ npm install
 
 All required environment variables are documented in `.env.example`. Keep secrets, API keys, tokens, customer data, and production credentials out of source control.
 
+Authentication requires `AUTH_SESSION_SECRET`, a server-only secret of at least 32 characters used to sign httpOnly session cookies.
+
 ### Development
 
 ```bash
@@ -133,6 +135,22 @@ npx prisma generate
 npx prisma migrate dev
 npx prisma studio
 ```
+
+---
+
+## Authentication
+
+The current authentication slice uses existing database `User`, `Agency`, and `Membership` records. Sign-in accepts an email address and optional agency slug, verifies an active user, active membership, and active agency, then issues a signed httpOnly session cookie. Password storage, Google OAuth, dashboards, restaurant management, reviews, AI, and reports are not implemented in this slice.
+
+Protected workspace routes resolve the active agency and membership role server-side on each request. Middleware redirects unauthenticated `/workspace` requests to `/sign-in?next=...`.
+
+### Auth API Routes
+
+| Route | Purpose | Inputs | Auth | Outputs | Errors |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/sign-in` | Create an app session for an active agency member. | JSON or form data: `email`, optional `agencySlug`, optional `next`. | Public, same-origin POST required. | `{ redirectTo }` and `rip_session` cookie. | `400` invalid input, `401` no active membership, `403` origin denied. |
+| `POST /api/auth/sign-out` | Clear the app session. | Optional `next` query string. | Public, same-origin POST required. | `{ redirectTo }` and expired `rip_session` cookie. | `403` origin denied. |
+| `GET /api/auth/session` | Return the active authenticated context. | Session cookie. | Requires a valid session and active membership. | `{ authenticated, user, agency, membership }`. | `401` unauthenticated or inactive context. |
 
 ---
 

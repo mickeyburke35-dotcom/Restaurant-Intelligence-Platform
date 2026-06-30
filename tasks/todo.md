@@ -3,6 +3,16 @@
 ## Current Work
 
 - 2026-06-30: Update today's checklist from current repository evidence only.
+- 2026-06-30: Implement authentication only for the Restaurant Intelligence Platform.
+
+## Authentication Implementation Plan
+
+1. Keep the slice schema-neutral and dependency-neutral by using existing `User`, `Agency`, and `Membership` records for database-backed email sign-in.
+2. Add signed httpOnly session cookies, sign-in and sign-out API routes, and a session API route that returns only the active authenticated context.
+3. Resolve active agency and membership role server-side on each protected request from an active user, active membership, and active agency.
+4. Add middleware for protected workspace routes and redirect unauthenticated users to the sign-in page with a safe return path.
+5. Add an authentication layout, sign-in page, protected workspace status page, and sign-out control without implementing dashboards, restaurants, reviews, AI, or reports.
+6. Document the auth routes and new environment variable, then verify with `npm run lint`, `npm run typecheck`, and `npm run build`.
 
 ## Static Landing Page Implementation Plan
 
@@ -143,6 +153,7 @@
 
 ## Completed
 
+- 2026-06-30: Implemented authentication only: database-backed email sign-in against active users and memberships, signed httpOnly session cookies, sign-out, session API, middleware-protected `/workspace`, active agency and role resolution, authentication layout, protected workspace status page, README auth route documentation, and `AUTH_SESSION_SECRET` in `.env.example`; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-30: Created the static Restaurant Intelligence Platform landing page at `app/landing/page.tsx` with hero, problem, workflow, AI trust, target user, CTA, and footer sections; preserved the existing app shell and architecture; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-30: Created `evidence/codex-architecture-review.md` summarizing Codex architecture review Questions 1-4 with ranked missing components, top technical tasks, risk mitigations, and final implementation priorities; no application code was modified.
 - 2026-06-30: Created `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, and `ONBOARDING_FRICTION_REPORT.md` for Review Insight Generation reliability risks, end-to-end product evaluation scenarios, and first-time onboarding friction tracking; no app features, API routes, schema edits, dependencies, or unrelated files were changed.
