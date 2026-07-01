@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## AI Review Summary Runtime Fix Plan
+
+1. Stop any running local Next.js dev server and remove the `.next` cache.
+2. Restart the dev server and re-test `/ai/review-summary` in the browser.
+3. If the runtime invariant remains, inspect the review summary page, client tester, and imports for server/client boundary violations.
+4. Make the smallest needed fix, then run lint, typecheck, build, and confirm a real Gemini response renders.
+
 ## Google AI Review Summary Integration Plan
 
 1. Add a server-only `POST /api/ai/review-summary` route that reads `GOOGLE_AI_API_KEY`, validates review text, calls Gemini, validates structured AI output, and returns user-safe errors.
@@ -87,6 +94,7 @@
 
 ## Completed
 
+- 2026-07-01: Cleared the Next.js cache, restarted the dev server, confirmed `/ai/review-summary` renders without the `clientReferenceManifest` invariant, verified the client/server boundary did not require code changes, confirmed a real Gemini review summary renders in browser, and passed `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-01: Implemented the first secure Google AI Studio / Gemini integration with `POST /api/ai/review-summary`, server-only `GOOGLE_AI_API_KEY` usage, request and output validation, a fictional-review test UI at `/ai/review-summary`, human-review note, README and `.env.example` updates, no Prisma schema changes, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
