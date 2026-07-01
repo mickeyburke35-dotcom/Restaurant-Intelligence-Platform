@@ -4,6 +4,14 @@
 
 - No active sprint task captured yet.
 
+## Google AI Review Summary Integration Plan
+
+1. Add a server-only `POST /api/ai/review-summary` route that reads `GOOGLE_AI_API_KEY`, validates review text, calls Gemini, validates structured AI output, and returns user-safe errors.
+2. Add a small test UI page for fictional restaurant review text, with client-side output validation before rendering the result.
+3. Show the generated summary, sentiment, key themes, and a human-review note without saving AI output to the database.
+4. Update `.env.example`, `README.md`, and this todo file; do not modify Prisma schema.
+5. Run `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## Prisma Initial Migration Plan
 
 1. Use the documented `.env.example` `DATABASE_URL` for all Prisma commands.
@@ -79,6 +87,7 @@
 
 ## Completed
 
+- 2026-07-01: Implemented the first secure Google AI Studio / Gemini integration with `POST /api/ai/review-summary`, server-only `GOOGLE_AI_API_KEY` usage, request and output validation, a fictional-review test UI at `/ai/review-summary`, human-review note, README and `.env.example` updates, no Prisma schema changes, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
