@@ -9,6 +9,7 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Multi-tenant agency workspaces
 - Role-based access control
 - Restaurant and client management
+- Restaurant location management
 - Approved review import
 - AI-assisted sentiment analysis
 - Theme extraction
@@ -147,6 +148,20 @@ Restaurant CRUD is implemented with agency-scoped Next.js route handlers:
 - `DELETE /api/restaurants/:id`: archives one restaurant by setting `status` to `ARCHIVED` and `deletedAt` to the current timestamp.
 
 All routes resolve an active agency membership before accessing restaurant data, validate input with Zod, and return user-safe `400`, `401`, `403`, `404`, `409`, or `500` errors. Local development may use `RESTAURANT_INTELLIGENCE_USER_EMAIL` or `RESTAURANT_INTELLIGENCE_USER_ID` to select a seeded user; non-production requests without an identity fall back to the first active manager-level membership.
+
+---
+
+## Location API Routes
+
+Location CRUD is implemented as restaurant-scoped Next.js route handlers:
+
+- `GET /api/restaurants/:id/locations`: lists locations for one restaurant in the signed-in user agency. Query parameters: `q` and `status` (`ALL`, `ACTIVE`, `PAUSED`, `CLOSED`, or `ARCHIVED`).
+- `POST /api/restaurants/:id/locations`: creates one location under the restaurant. Body fields: `name`, `addressLine1`, `addressLine2`, `city`, `region`, `postalCode`, `country`, `timezone`, `latitude`, `longitude`, and `status`.
+- `GET /api/restaurants/:id/locations/:locationId`: returns one non-archived location only when it belongs to the active agency and restaurant.
+- `PATCH /api/restaurants/:id/locations/:locationId`: updates one non-archived location with the same fields used by create.
+- `DELETE /api/restaurants/:id/locations/:locationId`: archives one location by setting `status` to `ARCHIVED` and `deletedAt` to the current timestamp.
+
+All location routes reuse the active agency membership and role checks from restaurant management. Every query is scoped by `agency_id` and `restaurant_id`, and manager-only mutations use the existing restaurant permission rules. Location inputs are validated with Zod and use the shared API error response helper.
 
 ---
 

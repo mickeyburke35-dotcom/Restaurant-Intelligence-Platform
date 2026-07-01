@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Location CRUD Rebuild Plan
+
+1. Reuse the existing restaurant CRUD foundation: `getActiveAgencyContext`, role checks, `apiErrorResponse`, Prisma client, and `[id]` route segment style.
+2. Add Zod validation and a tenant-scoped location service that enforces agency scope, restaurant scope, and soft archive behavior.
+3. Add nested restaurant location API routes plus server-action list/create/edit/archive UI pages without adding reviews, dashboards, AI storage, or reports.
+4. Update `README.md`, run lint, typecheck, and build, then record the completed outcome.
+
 ## Restaurant CRUD Implementation Plan
 
 1. Add focused server utilities for Prisma access, active agency resolution, restaurant validation, and tenant-scoped restaurant queries/actions.
@@ -86,6 +93,7 @@
 
 ## Completed
 
+- 2026-07-01: Rebuilt Location CRUD on top of `feature/restaurants` with restaurant-scoped list/create/edit/archive UI, nested `[id]` API routes, Zod validation, existing active-agency request context and API error helpers, Prisma soft archive behavior, README documentation, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-30: Implemented Restaurant CRUD only: agency-scoped list/create/edit/archive UI, tenant-scoped API routes, Zod server-side validation, Prisma-backed soft-delete archive behavior, local active-agency context resolution, README API documentation, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.

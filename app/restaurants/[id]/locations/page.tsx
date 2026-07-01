@@ -1,17 +1,22 @@
-import { RestaurantStatus, type MembershipRole } from "@prisma/client";
+import { LocationStatus } from "@prisma/client";
 import Link from "next/link";
-import { archiveRestaurantAction } from "@/app/restaurants/actions";
+import { notFound } from "next/navigation";
+import { archiveLocationAction } from "@/app/restaurants/actions";
+import { locationListFilterSchema } from "@/lib/location-validation";
+import { listTenantLocations, type LocationRecord } from "@/lib/locations";
 import {
   canManageRestaurants,
   getActiveAgencyContext,
   type AgencyRequestContext
 } from "@/lib/request-context";
-import { listTenantRestaurants, type RestaurantRecord } from "@/lib/restaurants";
-import { restaurantListFilterSchema } from "@/lib/restaurant-validation";
+import { getTenantRestaurant, type RestaurantRecord } from "@/lib/restaurants";
 
 export const dynamic = "force-dynamic";
 
-type RestaurantPageProps = {
+type LocationsPageProps = {
+  params: Promise<{
+    id: string;
+  }>;
   searchParams: Promise<{
     q?: string | string[];
     status?: string | string[];
@@ -22,56 +27,75 @@ function firstSearchParam(value: string | string[] | undefined): string | undefi
   return Array.isArray(value) ? value[0] : value;
 }
 
-function formatStatus(status: RestaurantStatus): string {
-  const labels: Record<RestaurantStatus, string> = {
-    [RestaurantStatus.ACTIVE]: "Active",
-    [RestaurantStatus.PAUSED]: "Paused",
-    [RestaurantStatus.ARCHIVED]: "Archived"
+function formatStatus(status: LocationStatus): string {
+  const labels: Record<LocationStatus, string> = {
+    [LocationStatus.ACTIVE]: "Active",
+    [LocationStatus.PAUSED]: "Paused",
+    [LocationStatus.CLOSED]: "Closed",
+    [LocationStatus.ARCHIVED]: "Archived"
   };
 
   return labels[status];
 }
 
-function statusBadgeClass(status: RestaurantStatus): string {
-  const classes: Record<RestaurantStatus, string> = {
-    [RestaurantStatus.ACTIVE]: "border-positive/30 bg-positive/10 text-positive",
-    [RestaurantStatus.PAUSED]: "border-mixed/30 bg-mixed/10 text-mixed",
-    [RestaurantStatus.ARCHIVED]: "border-muted/30 bg-muted/10 text-muted"
+function statusBadgeClass(status: LocationStatus): string {
+  const classes: Record<LocationStatus, string> = {
+    [LocationStatus.ACTIVE]: "border-positive/30 bg-positive/10 text-positive",
+    [LocationStatus.PAUSED]: "border-mixed/30 bg-mixed/10 text-mixed",
+    [LocationStatus.CLOSED]: "border-neutral/30 bg-neutral/10 text-neutral",
+    [LocationStatus.ARCHIVED]: "border-muted/30 bg-muted/10 text-muted"
   };
 
   return classes[status];
 }
 
-function roleLabel(role: MembershipRole): string {
-  return role
-    .toLowerCase()
-    .split("_")
-    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-    .join(" ");
+function formatAddress(location: LocationRecord): string {
+  const parts = [
+    location.addressLine1,
+    location.addressLine2,
+    location.city,
+    location.region,
+    location.postalCode,
+    location.country
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(", ") : "No address recorded";
 }
 
-function RestaurantsEmptyState({ canManage }: { canManage: boolean }) {
+function LocationEmptyState({
+  canManage,
+  restaurant
+}: {
+  canManage: boolean;
+  restaurant: RestaurantRecord;
+}) {
   return (
     <div className="rounded-md border border-dashed border-line bg-panel px-6 py-12 text-center">
-      <h2 className="text-lg font-semibold text-ink">No restaurants found</h2>
+      <h2 className="text-lg font-semibold text-ink">No locations found</h2>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">
-        Add a restaurant client to begin organizing agency-scoped review intelligence. Locations,
-        reviews, AI insights, and reports stay out of this setup step.
+        Add a location to organize this restaurant client by market, city, or storefront.
+        Reviews, AI insights, dashboards, and reports stay out of this setup step.
       </p>
       {canManage ? (
         <Link
-          href="/restaurants/new"
+          href={`/restaurants/${restaurant.id}/locations/new`}
           className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
         >
-          Create restaurant
+          Create location
         </Link>
       ) : null}
     </div>
   );
 }
 
-function ArchiveButton({ restaurant }: { restaurant: RestaurantRecord }) {
-  const archiveAction = archiveRestaurantAction.bind(null, restaurant.id);
+function ArchiveLocationButton({
+  location,
+  restaurant
+}: {
+  location: LocationRecord;
+  restaurant: RestaurantRecord;
+}) {
+  const archiveAction = archiveLocationAction.bind(null, restaurant.id, location.id);
 
   return (
     <form action={archiveAction}>
@@ -85,12 +109,14 @@ function ArchiveButton({ restaurant }: { restaurant: RestaurantRecord }) {
   );
 }
 
-function RestaurantTable({
-  restaurants,
-  canManage
+function LocationTable({
+  canManage,
+  locations,
+  restaurant
 }: {
-  restaurants: RestaurantRecord[];
   canManage: boolean;
+  locations: LocationRecord[];
+  restaurant: RestaurantRecord;
 }) {
   return (
     <div className="overflow-hidden rounded-md border border-line bg-panel shadow-soft">
@@ -98,9 +124,9 @@ function RestaurantTable({
         <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
           <thead className="bg-snow text-xs uppercase text-muted">
             <tr>
-              <th className="border-b border-line px-4 py-3 font-semibold">Restaurant</th>
-              <th className="border-b border-line px-4 py-3 font-semibold">Segment</th>
-              <th className="border-b border-line px-4 py-3 font-semibold">Cuisine</th>
+              <th className="border-b border-line px-4 py-3 font-semibold">Location</th>
+              <th className="border-b border-line px-4 py-3 font-semibold">Address</th>
+              <th className="border-b border-line px-4 py-3 font-semibold">Timezone</th>
               <th className="border-b border-line px-4 py-3 font-semibold">Status</th>
               <th className="border-b border-line px-4 py-3 font-semibold">Updated</th>
               {canManage ? (
@@ -111,36 +137,25 @@ function RestaurantTable({
             </tr>
           </thead>
           <tbody>
-            {restaurants.map((restaurant) => (
-              <tr key={restaurant.id} className="transition hover:bg-snow">
+            {locations.map((location) => (
+              <tr key={location.id} className="transition hover:bg-snow">
                 <td className="border-b border-line px-4 py-4 align-top">
-                  <div className="font-semibold text-ink">{restaurant.name}</div>
-                  {restaurant.websiteUrl ? (
-                    <a
-                      href={restaurant.websiteUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 inline-block text-xs font-medium text-pine hover:text-pine-dark"
-                    >
-                      Website
-                    </a>
-                  ) : (
-                    <p className="mt-1 text-xs text-muted">No website recorded</p>
-                  )}
+                  <div className="font-semibold text-ink">{location.name}</div>
+                  <p className="mt-1 text-xs text-muted">{location.country}</p>
                 </td>
                 <td className="border-b border-line px-4 py-4 align-top text-muted">
-                  {restaurant.segment ?? "Not set"}
+                  {formatAddress(location)}
                 </td>
                 <td className="border-b border-line px-4 py-4 align-top text-muted">
-                  {restaurant.cuisine ?? "Not set"}
+                  {location.timezone}
                 </td>
                 <td className="border-b border-line px-4 py-4 align-top">
                   <span
                     className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadgeClass(
-                      restaurant.status
+                      location.status
                     )}`}
                   >
-                    {formatStatus(restaurant.status)}
+                    {formatStatus(location.status)}
                   </span>
                 </td>
                 <td className="border-b border-line px-4 py-4 align-top text-muted">
@@ -148,26 +163,20 @@ function RestaurantTable({
                     month: "short",
                     day: "numeric",
                     year: "numeric"
-                  }).format(restaurant.updatedAt)}
+                  }).format(location.updatedAt)}
                 </td>
                 {canManage ? (
                   <td className="border-b border-line px-4 py-4 align-top">
                     <div className="flex justify-end gap-2">
-                      {restaurant.status !== RestaurantStatus.ARCHIVED ? (
+                      {location.status !== LocationStatus.ARCHIVED ? (
                         <>
                           <Link
-                            href={`/restaurants/${restaurant.id}/locations`}
-                            className="rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-lichen"
-                          >
-                            Locations
-                          </Link>
-                          <Link
-                            href={`/restaurants/${restaurant.id}/edit`}
+                            href={`/restaurants/${restaurant.id}/locations/${location.id}/edit`}
                             className="rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-lichen"
                           >
                             Edit
                           </Link>
-                          <ArchiveButton restaurant={restaurant} />
+                          <ArchiveLocationButton location={location} restaurant={restaurant} />
                         </>
                       ) : (
                         <span className="rounded-md border border-line px-3 py-2 text-xs font-semibold text-muted">
@@ -197,7 +206,7 @@ function SearchAndFilter({
     <form className="grid gap-3 rounded-md border border-line bg-panel p-4 shadow-soft sm:grid-cols-[1fr_180px_auto] sm:items-end">
       <div>
         <label htmlFor="q" className="block text-sm font-semibold text-ink">
-          Search restaurants
+          Search locations
         </label>
         <input
           id="q"
@@ -217,10 +226,11 @@ function SearchAndFilter({
           defaultValue={status}
           className="mt-2 h-10 w-full rounded-md border border-line bg-snow px-3 text-sm text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-lichen"
         >
-          <option value="ALL">Active and paused</option>
-          <option value={RestaurantStatus.ACTIVE}>Active</option>
-          <option value={RestaurantStatus.PAUSED}>Paused</option>
-          <option value={RestaurantStatus.ARCHIVED}>Archived</option>
+          <option value="ALL">Active, paused, and closed</option>
+          <option value={LocationStatus.ACTIVE}>Active</option>
+          <option value={LocationStatus.PAUSED}>Paused</option>
+          <option value={LocationStatus.CLOSED}>Closed</option>
+          <option value={LocationStatus.ARCHIVED}>Archived</option>
         </select>
       </div>
       <button
@@ -233,14 +243,16 @@ function SearchAndFilter({
   );
 }
 
-function RestaurantPageShell({
+function LocationPageShell({
   context,
-  restaurants,
-  filters
+  filters,
+  locations,
+  restaurant
 }: {
   context: AgencyRequestContext;
-  restaurants: RestaurantRecord[];
   filters: { q: string; status: string };
+  locations: LocationRecord[];
+  restaurant: RestaurantRecord;
 }) {
   const canManage = canManageRestaurants(context);
 
@@ -249,60 +261,69 @@ function RestaurantPageShell({
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-8 sm:px-8">
         <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-pine">{context.agencyName}</p>
-            <h1 className="mt-2 text-2xl font-semibold text-ink">Restaurant management</h1>
+            <Link
+              href="/restaurants"
+              className="text-sm font-medium text-pine transition hover:text-pine-dark"
+            >
+              Back to restaurants
+            </Link>
+            <h1 className="mt-3 text-2xl font-semibold text-ink">
+              {restaurant.name} locations
+            </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              Maintain agency-scoped restaurant clients and open a restaurant row to manage
-              locations. Reviews, AI insights, and reports stay out of this setup step.
+              Manage the restaurant locations attached to this agency-scoped client.
+              Reviews, dashboards, AI storage, and reports are not part of this step.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <span className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-muted">
-              {roleLabel(context.role)}
-            </span>
-            {canManage ? (
-              <Link
-                href="/restaurants/new"
-                className="inline-flex h-10 items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
-              >
-                Create restaurant
-              </Link>
-            ) : null}
-          </div>
+          {canManage ? (
+            <Link
+              href={`/restaurants/${restaurant.id}/locations/new`}
+              className="inline-flex h-10 items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
+            >
+              Create location
+            </Link>
+          ) : null}
         </header>
 
         <SearchAndFilter q={filters.q} status={filters.status} />
 
-        {restaurants.length > 0 ? (
-          <RestaurantTable restaurants={restaurants} canManage={canManage} />
+        {locations.length > 0 ? (
+          <LocationTable canManage={canManage} locations={locations} restaurant={restaurant} />
         ) : (
-          <RestaurantsEmptyState canManage={canManage} />
+          <LocationEmptyState canManage={canManage} restaurant={restaurant} />
         )}
       </div>
     </main>
   );
 }
 
-export default async function RestaurantsPage({ searchParams }: RestaurantPageProps) {
-  const params = await searchParams;
-  const parsedFilters = restaurantListFilterSchema.safeParse({
-    q: firstSearchParam(params.q),
-    status: firstSearchParam(params.status)
+export default async function LocationsPage({ params, searchParams }: LocationsPageProps) {
+  const [{ id }, queryParams] = await Promise.all([params, searchParams]);
+  const parsedFilters = locationListFilterSchema.safeParse({
+    q: firstSearchParam(queryParams.q),
+    status: firstSearchParam(queryParams.status)
   });
   const filters = parsedFilters.success
     ? parsedFilters.data
-    : restaurantListFilterSchema.parse({});
+    : locationListFilterSchema.parse({});
   const context = await getActiveAgencyContext();
-  const restaurants = await listTenantRestaurants(context, filters);
+  const restaurant = await getTenantRestaurant(context, id);
+
+  if (!restaurant) {
+    notFound();
+  }
+
+  const locations = await listTenantLocations(context, restaurant.id, filters);
 
   return (
-    <RestaurantPageShell
+    <LocationPageShell
       context={context}
-      restaurants={restaurants}
       filters={{
         q: filters.q ?? "",
         status: filters.status
       }}
+      locations={locations}
+      restaurant={restaurant}
     />
   );
 }
