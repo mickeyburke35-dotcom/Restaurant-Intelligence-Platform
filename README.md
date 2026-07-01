@@ -9,6 +9,7 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Multi-tenant agency workspaces
 - Role-based access control
 - Restaurant and client management
+- Tenant-scoped review source management
 - Approved review import
 - AI-assisted sentiment analysis
 - Theme extraction
@@ -133,6 +134,54 @@ npx prisma generate
 npx prisma migrate dev
 npx prisma studio
 ```
+
+---
+
+## Review Source APIs
+
+Review source endpoints manage source configuration records only. They do not scrape, call provider APIs, import reviews, create dashboards, or store AI insights.
+
+All routes require an active agency request context. The current route integration expects `x-agency-id` and `x-user-id`, then verifies that the user has an active membership in that agency. `VIEWER` users can read sources but cannot create, edit, or archive them.
+
+### List Review Sources
+
+`GET /api/restaurants/:restaurantId/review-sources`
+
+- Purpose: list review sources for one restaurant, optionally narrowed to one location.
+- Query inputs: `locationId` UUID, `includeArchived=true|false`.
+- Output: `{ data: ReviewSource[] }`, including the optional location summary.
+- Auth: any active agency role with access to the agency context.
+- Errors: `400` for invalid route or query input, `401` for missing agency or user context, `403` for invalid membership, `404` when the restaurant is outside the agency.
+
+### Create Review Source
+
+`POST /api/restaurants/:restaurantId/review-sources`
+
+- Purpose: create a source assigned to the restaurant and optionally one of its locations.
+- JSON inputs: `name`, `sourceType`, optional `locationId`, `approvalStatus`, `connectionStatus`, `externalAccountId`, `externalLocationId`, and `permissionNotes`.
+- Output: `{ data: ReviewSource }`.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid input or a location outside the restaurant, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the restaurant is outside the agency, `409` for duplicate provider identifiers.
+
+### Edit Review Source
+
+`PATCH /api/review-sources/:reviewSourceId`
+
+- Purpose: update source metadata, status, provider identifiers, permission notes, or connect/disconnect it from a location by setting `locationId`.
+- JSON inputs: any create field as a partial payload. Use `locationId: null` to remove the location link while keeping the restaurant assignment.
+- Output: `{ data: ReviewSource }`.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid input or a location outside the source restaurant, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the source is outside the agency, `409` for duplicate provider identifiers.
+
+### Archive Review Source
+
+`DELETE /api/review-sources/:reviewSourceId`
+
+- Purpose: soft archive a source and mark it `DISCONNECTED`; the database row remains for auditability.
+- Inputs: route `reviewSourceId` UUID.
+- Output: `{ data: ReviewSource }` with `deletedAt` set.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid route input, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the source is outside the agency or already archived.
 
 ---
 

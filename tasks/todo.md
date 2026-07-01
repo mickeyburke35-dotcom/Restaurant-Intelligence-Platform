@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Review Sources Implementation Plan
+
+1. Add tenant-scoped review source service functions for list, create, edit, and soft archive/disconnect using the existing Prisma `ReviewSource` model.
+2. Add Zod-validated Next.js API routes for restaurant-scoped list/create and source-scoped edit/archive actions.
+3. Keep behavior limited to source configuration records: no scraping, external provider calls, review import, dashboards, or AI insight storage.
+4. Update README API documentation and record completion notes after lint, typecheck, and build verification.
+
 ## Prisma Initial Migration Plan
 
 1. Use the documented `.env.example` `DATABASE_URL` for all Prisma commands.
@@ -79,6 +86,7 @@
 
 ## Completed
 
+- 2026-07-01: Implemented Review Sources only: tenant-scoped list/create/edit/soft archive API routes and service layer using the existing Prisma schema, Zod validation, restaurant/location ownership checks, and no scraping, external API calls, review import, dashboards, or AI insight storage. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
