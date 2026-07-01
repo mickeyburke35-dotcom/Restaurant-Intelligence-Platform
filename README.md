@@ -16,6 +16,7 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Competitor signal tracking
 - Dashboard analytics
 - PDF/CSV report export
+- Standalone Session 16 lead capture demo at `/demo/lead-capture`
 
 ---
 
@@ -95,6 +96,44 @@ npm install
 ### Environment Variables
 
 All required environment variables are documented in `.env.example`. Keep secrets, API keys, tokens, customer data, and production credentials out of source control.
+
+For the Session 16 lead capture demo:
+
+- `SUPABASE_URL`: Supabase project URL used by the server route.
+- `SUPABASE_SERVICE_ROLE_KEY`: Server-only key used by `POST /api/demo/leads` to insert into `public.leads`.
+
+Do not expose `SUPABASE_SERVICE_ROLE_KEY` to client components or `NEXT_PUBLIC_` variables.
+
+---
+
+## API Routes
+
+### `POST /api/demo/leads`
+
+Purpose: captures demo interest from `/demo/lead-capture`.
+
+Input:
+
+```json
+{
+  "email": "name@company.com"
+}
+```
+
+Server behavior:
+
+- Validates the request body with Zod.
+- Inserts into `public.leads` with `email` and `source = "restaurant_demo"`.
+- Uses server-only Supabase environment variables.
+
+Response:
+
+- `201`: `{ "ok": true, "message": "Thanks. We will follow up to schedule your demo." }`
+- `400`: invalid JSON or invalid email.
+- `500`: server configuration or unexpected request failure.
+- `502`: Supabase insert failure.
+
+Auth: public demo endpoint. It does not read or modify tenant-scoped restaurant intelligence data.
 
 ### Development
 

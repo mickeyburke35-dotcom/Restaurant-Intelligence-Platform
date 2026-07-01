@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Session 16 Lead Capture Demo Plan
+
+1. Inspect the existing Next.js App Router, Supabase helpers, environment variables, and styling conventions.
+2. Add a standalone lead capture page with email validation feedback, loading state, success state, and a friendly failure message.
+3. Add `POST /api/demo/leads` with Zod server-side validation and a server-only Supabase insert into `public.leads` using `source = "restaurant_demo"`.
+4. Update documentation, then verify with `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## Prisma Initial Migration Plan
 
 1. Use the documented `.env.example` `DATABASE_URL` for all Prisma commands.
@@ -79,6 +86,7 @@
 
 ## Completed
 
+- 2026-07-01: Implemented the Session 16 standalone lead capture demo at `/demo/lead-capture` with client loading, success, and friendly error states; added `POST /api/demo/leads` with Zod validation and server-only Supabase REST insertion into `public.leads` using `source = "restaurant_demo"`; updated `.env.example`, README API/env notes, and ESLint generated-output ignores; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
