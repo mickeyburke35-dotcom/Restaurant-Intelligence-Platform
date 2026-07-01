@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## GitHub Push Security Review Workflow Plan
+
+1. Add the post-push security-audit rule to `AGENTS.md` under Workflow.
+2. Add the same workflow rule and checklist to the README development workflow because it documents workflow rules.
+3. Keep the change documentation-only: no application code, dependencies, destructive commands, or unrelated edits.
+4. Re-read the changed sections and record completion notes.
+
 ## Review Sources Implementation Plan
 
 1. Add tenant-scoped review source service functions for list, create, edit, and soft archive/disconnect using the existing Prisma `ReviewSource` model.
@@ -86,6 +93,7 @@
 
 ## Completed
 
+- 2026-07-01: Added the post-GitHub-push security-audit workflow rule and checklist to `AGENTS.md` and `README.md`, including required pass/fail reporting, files checked, findings, remediation guidance, secret search terms, `.env` checks, screenshot checks, Popstop/Videoreport artifact checks, and intended-file confirmation. No application code or dependencies were changed.
 - 2026-07-01: Implemented Review Sources only: tenant-scoped list/create/edit/soft archive API routes and service layer using the existing Prisma schema, Zod validation, restaurant/location ownership checks, and no scraping, external API calls, review import, dashboards, or AI insight storage. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.

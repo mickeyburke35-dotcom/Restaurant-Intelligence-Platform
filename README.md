@@ -216,6 +216,17 @@ During development:
 - Do not add dependencies without approval.
 - Do not change data collection rules or AI insight behavior without approval.
 
+After every push to GitHub, spawn or run a security-audit subagent before opening or merging a PR. The audit must check the pushed diff for private information, secrets, API keys, database URLs, service-role keys, tokens, personal data, accidental .env commits, generated files, and unrelated coursework artifacts. The audit must report pass/fail, list files checked, list any findings, and recommend immediate remediation before merge.
+
+Post-push security audit checklist:
+
+- Check git diff against origin branch.
+- Search for common secrets: `GOOGLE_AI_API_KEY`, `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `AUTH_SESSION_SECRET`, `github_pat_`, `sk-`, and `AIza`.
+- Confirm `.env` is ignored.
+- Confirm no screenshots expose secrets.
+- Confirm no unrelated Popstop/Videoreport files are committed to the Restaurant Intelligence repo.
+- Confirm only intended files changed.
+
 ---
 
 ## Documentation
