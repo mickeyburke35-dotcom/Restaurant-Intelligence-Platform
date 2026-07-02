@@ -11,6 +11,7 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Restaurant and client management
 - Tenant-scoped review source management
 - Approved review import
+- Read-only review dashboard with search, filters, sorting, pagination, and detail view
 - AI-assisted sentiment analysis
 - Theme extraction
 - Insight generation
@@ -134,6 +135,52 @@ npx prisma generate
 npx prisma migrate dev
 npx prisma studio
 ```
+
+---
+
+## Review Dashboard
+
+The read-only Review Dashboard is available at `/reviews`. It uses the same active agency request context as the API layer and only reads tenant-scoped review data from the existing Prisma models.
+
+The dashboard supports:
+
+- Review list/table
+- Search across review title, text, external ID, restaurant, location, and source name
+- Filters by restaurant, location, source, rating, sentiment, and published date range
+- Sorting by published date, rating, sentiment, restaurant, location, source, and collected date
+- Pagination with configurable page size
+- Review detail view with full review text, source, timestamps, trace fields, rating, sentiment, score, language, themes, and source review link when available
+
+This dashboard does not generate AI output, create reports, import reviews, collect new data, or show competitor features.
+
+---
+
+## Review APIs
+
+Review endpoints are read-only dashboard endpoints. They do not create, edit, import, enrich, summarize, export, or collect reviews.
+
+All routes require an active agency request context. The current route integration expects `x-agency-id` and `x-user-id`, then verifies that the user has an active membership in that agency. Every query is scoped by `agency_id` and excludes soft-deleted reviews.
+
+### List Reviews
+
+`GET /api/reviews`
+
+- Purpose: list tenant-scoped reviews for the dashboard with filters, sorting, pagination, summary metrics, and filter options.
+- Query inputs: `search`, `restaurantId` UUID, `locationId` UUID, `reviewSourceId` UUID, `rating` from `1` to `5`, `sentiment`, `dateFrom` and `dateTo` as `YYYY-MM-DD`, `sortBy`, `sortDirection=asc|desc`, `page`, and `pageSize`.
+- Supported `sortBy` values: `publishedAt`, `rating`, `sentiment`, `restaurant`, `location`, `source`, and `collectedAt`.
+- Output: `{ data, pagination, summary, filters }`, where `summary` includes total reviews, average rating, and sentiment counts.
+- Auth: any active agency role with access to the agency context.
+- Errors: `400` for invalid query input, `401` for missing agency or user context, and `403` for invalid membership.
+
+### Get Review Detail
+
+`GET /api/reviews/:reviewId`
+
+- Purpose: fetch one tenant-scoped review for the dashboard detail view.
+- Inputs: route `reviewId` UUID.
+- Output: `{ data: Review }`, including restaurant, location, and review source summaries.
+- Auth: any active agency role with access to the agency context.
+- Errors: `400` for invalid route input, `401` for missing agency or user context, `403` for invalid membership, and `404` when the review is outside the agency or soft-deleted.
 
 ---
 
