@@ -19,6 +19,15 @@ type SupabaseErrorBody = {
   hint?: string;
 };
 
+type LeadWebhookPayload = {
+  email: string;
+  source: typeof demoLeadSource;
+  created_at: string;
+};
+
+const zapierLeadWebhookUrl =
+  "https://hooks.zapier.com/hooks/catch/28124408/42jvbyn/";
+
 function getSupabaseConfig(): SupabaseConfig | null {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -69,6 +78,34 @@ async function readSupabaseError(response: Response): Promise<unknown> {
 
 function jsonResponse(body: DemoLeadResponse, status: number) {
   return NextResponse.json(body, { status });
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown webhook error.";
+}
+
+function sendLeadWebhook(payload: LeadWebhookPayload) {
+  void fetch(zapierLeadWebhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Zapier lead webhook failed.", {
+          status: response.status,
+          statusText: response.statusText
+        });
+      }
+    })
+    .catch((error: unknown) => {
+      console.error("Zapier lead webhook failed.", {
+        error: getErrorMessage(error)
+      });
+    });
 }
 
 export async function POST(request: Request) {
@@ -144,6 +181,12 @@ export async function POST(request: Request) {
         502
       );
     }
+
+    sendLeadWebhook({
+      email: parsed.data.email,
+      source: demoLeadSource,
+      created_at: new Date().toISOString()
+    });
 
     return jsonResponse(
       {

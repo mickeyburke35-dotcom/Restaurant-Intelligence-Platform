@@ -124,6 +124,8 @@ Server behavior:
 
 - Validates the request body with Zod.
 - Inserts into `public.leads` with `email` and `source = "restaurant_demo"`.
+- After a successful insert, starts a fire-and-forget server-side POST to the Session 16 Zapier webhook with `email`, `source`, and `created_at`.
+- Logs Zapier webhook delivery failures without changing the lead capture response.
 - Uses server-only Supabase environment variables.
 
 Response:
