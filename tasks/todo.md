@@ -4,19 +4,27 @@
 
 - No active sprint task captured yet.
 
-## Location CRUD Rebuild Plan
+## Review Import Implementation Plan
 
-1. Reuse the existing restaurant CRUD foundation: `getActiveAgencyContext`, role checks, `apiErrorResponse`, Prisma client, and `[id]` route segment style.
-2. Add Zod validation and a tenant-scoped location service that enforces agency scope, restaurant scope, and soft archive behavior.
-3. Add nested restaurant location API routes plus server-action list/create/edit/archive UI pages without adding reviews, dashboards, AI storage, or reports.
-4. Update `README.md`, run lint, typecheck, and build, then record the completed outcome.
+1. Add a no-dependency CSV parser and Zod row validation for approved public review imports.
+2. Add tenant-scoped preview and confirmation services that verify restaurant, location, and approved review source ownership before reading or writing reviews.
+3. Add API routes for review import preview and confirmation, reusing the existing agency request context and editor-role checks.
+4. Add an import page that uploads CSV text, previews ready/rejected rows, requires approved-public-data confirmation, and submits the import.
+5. Update README API documentation, record completion notes, and verify with lint, typecheck, and build.
 
-## Restaurant CRUD Implementation Plan
+## GitHub Push Security Review Workflow Plan
 
-1. Add focused server utilities for Prisma access, active agency resolution, restaurant validation, and tenant-scoped restaurant queries/actions.
-2. Build a restaurant list page with search/status filters, create and edit forms, and archive controls without adding locations, reviews, AI, or reports.
-3. Add tenant-scoped API route handlers for restaurant list, create, update, and archive operations with user-safe validation errors.
-4. Run lint, typecheck, and build, then record the implementation outcome.
+1. Add the post-push security-audit rule to `AGENTS.md` under Workflow.
+2. Add the same workflow rule and checklist to the README development workflow because it documents workflow rules.
+3. Keep the change documentation-only: no application code, dependencies, destructive commands, or unrelated edits.
+4. Re-read the changed sections and record completion notes.
+
+## Review Sources Implementation Plan
+
+1. Add tenant-scoped review source service functions for list, create, edit, and soft archive/disconnect using the existing Prisma `ReviewSource` model.
+2. Add Zod-validated Next.js API routes for restaurant-scoped list/create and source-scoped edit/archive actions.
+3. Keep behavior limited to source configuration records: no scraping, external provider calls, review import, dashboards, or AI insight storage.
+4. Update README API documentation and record completion notes after lint, typecheck, and build verification.
 
 ## Prisma Initial Migration Plan
 
@@ -93,8 +101,9 @@
 
 ## Completed
 
-- 2026-07-01: Rebuilt Location CRUD on top of `feature/restaurants` with restaurant-scoped list/create/edit/archive UI, nested `[id]` API routes, Zod validation, existing active-agency request context and API error helpers, Prisma soft archive behavior, README documentation, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
-- 2026-06-30: Implemented Restaurant CRUD only: agency-scoped list/create/edit/archive UI, tenant-scoped API routes, Zod server-side validation, Prisma-backed soft-delete archive behavior, local active-agency context resolution, README API documentation, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-07-01: Implemented Review Import only: no-dependency CSV parser, Zod row validation, preview and confirmation APIs, duplicate rejection by external review ID per agency/source, approved-source and approved-public-data gates, Prisma review storage linked to agency, restaurant, location, and review source, import audit logging, and a `/reviews/import` page. Updated README API documentation. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-07-01: Added the post-GitHub-push security-audit workflow rule and checklist to `AGENTS.md` and `README.md`, including required pass/fail reporting, files checked, findings, remediation guidance, secret search terms, `.env` checks, screenshot checks, Popstop/Videoreport artifact checks, and intended-file confirmation. No application code or dependencies were changed.
+- 2026-07-01: Implemented Review Sources only: tenant-scoped list/create/edit/soft archive API routes and service layer using the existing Prisma schema, Zod validation, restaurant/location ownership checks, and no scraping, external API calls, review import, dashboards, or AI insight storage. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.

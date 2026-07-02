@@ -165,6 +165,56 @@ All location routes reuse the active agency membership and role checks from rest
 
 ---
 
+## Review Import APIs
+
+Review import endpoints parse CSV uploads, validate review rows, preview ready and rejected rows, and store approved public reviews in the existing `reviews` table. They do not call external providers, scrape websites, generate AI output, or create dashboards.
+
+All import routes require `x-agency-id` and `x-user-id`. The user must have an active Owner, Admin, Manager, or Analyst membership in the agency. The selected restaurant, location, and review source must belong to that agency, and the review source must have `approvalStatus: APPROVED`.
+
+### CSV Columns
+
+Required columns:
+
+- `external_review_id`: provider/export review identifier used for duplicate prevention.
+- `published_at`: public review publication date.
+
+Optional columns:
+
+- `rating`: numeric rating from 1 to 5.
+- `title`
+- `text`
+- `language`
+- `author_display_name_hash`: hashed display name only; raw names and contact fields are rejected.
+- `review_url`
+- `approved_public`: when present, must be true.
+
+Supported aliases include `external_id`, `review_id`, `provider_review_id`, `review_date`, `published_date`, `review_text`, `url`, and `source_url`. Unsupported columns and private/contact columns such as author name, email, phone, customer ID, or customer name are rejected.
+
+### Preview Review Import
+
+`POST /api/reviews/import/preview`
+
+- Purpose: parse CSV text and return row-level import readiness before storing reviews.
+- JSON inputs: `restaurantId`, `locationId`, `reviewSourceId`, `csvText`, and `approvedPublicData: true`.
+- Output: `{ data: { summary, fileErrors, rows } }`, where rows are marked `READY` or `REJECTED` with reasons.
+- Duplicate handling: rows are rejected when their external review ID repeats in the CSV or already exists for the same agency and review source.
+- Auth: Owner, Admin, Manager, or Analyst.
+- Errors: `400` for invalid request input, unapproved source, location/source mismatch, malformed request JSON, or invalid IDs; `401` for missing request context; `403` for invalid membership or read-only role; `404` when the restaurant or review source is outside the agency.
+
+### Confirm Review Import
+
+`POST /api/reviews/import/confirm`
+
+- Purpose: rerun the same validation and insert only rows that are still ready.
+- JSON inputs: same as preview.
+- Output: `{ data: { importedCount, preview } }`.
+- Storage: creates tenant-scoped `Review` records linked to `agencyId`, `restaurantId`, `locationId`, and `reviewSourceId`; stores source payload hashes and CSV import metadata.
+- Duplicate handling: uses external review ID plus review source within the agency; database inserts use duplicate skipping as an additional guard.
+- Auth: Owner, Admin, Manager, or Analyst.
+- Errors: same as preview.
+
+---
+
 ## AI Principles
 
 - AI assists users; it does not replace human decision-making.
