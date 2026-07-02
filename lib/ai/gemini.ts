@@ -1,6 +1,7 @@
 import "server-only";
 
 export const GEMINI_MODEL = "gemini-3.5-flash";
+export const GEMINI_FALLBACK_MODEL = "gemini-3.1-flash-lite";
 
 const GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
 
@@ -21,11 +22,13 @@ export class GeminiJsonError extends Error {
 
 export async function requestGeminiJson({
   input,
+  model = GEMINI_MODEL,
   schema,
   systemInstruction,
   temperature = 0.2
 }: {
   input: string;
+  model?: string;
   schema: unknown;
   systemInstruction: string;
   temperature?: number;
@@ -43,7 +46,7 @@ export async function requestGeminiJson({
       "x-goog-api-key": apiKey
     },
     body: JSON.stringify({
-      model: GEMINI_MODEL,
+      model,
       system_instruction: systemInstruction,
       input,
       store: false,
@@ -72,6 +75,19 @@ export async function requestGeminiJson({
   const outputText = extractOutputText(parsedJson);
 
   return outputText ? parseJson(outputText) : parsedJson;
+}
+
+export function isTransientGeminiError(error: GeminiJsonError): boolean {
+  const status = error.details?.status;
+  const body = error.details?.body.toLowerCase() ?? "";
+
+  return (
+    (typeof status === "number" && status >= 500 && status < 600) ||
+    body.includes("high demand") ||
+    body.includes("overloaded") ||
+    body.includes("temporarily unavailable") ||
+    body.includes("unavailable")
+  );
 }
 
 function parseJson(value: string): unknown {

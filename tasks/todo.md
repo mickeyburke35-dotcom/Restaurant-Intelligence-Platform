@@ -4,6 +4,20 @@
 
 - No active sprint task captured yet.
 
+## AI Insight Generation Resilience Plan
+
+1. Inspect the Gemini helper and insight generation model metadata flow without changing tenant checks or Prisma schema.
+2. Add a stable fallback model retry only for transient 5xx/high-demand Gemini responses during insight generation.
+3. Store the actual model that successfully generated draft insights and preserve the existing friendly UI error when both attempts fail.
+4. Update README documentation and verify `npm run lint`, `npm run typecheck`, and `npm run build`.
+
+## AI Insight Generation Insert Fix Plan
+
+1. Inspect the checked-in `Insight` and `InsightSourceReview` Prisma models and the current `tx.insight.create()` write shape.
+2. Replace scalar relation field writes in the insight create call with Prisma relation `connect` writes that preserve active-agency, restaurant, location, creator, and source-review evidence links.
+3. Confirm the AI Insight Review page still exposes Approve and Reject actions for manageable draft insights.
+4. Verify with `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## Reports Implementation Plan
 
 1. Add a tenant-scoped report service using the existing Prisma `Report` model, selecting only approved insights for the chosen restaurant, optional location, and review publication date range.
@@ -122,6 +136,8 @@
 
 ## Completed
 
+- 2026-07-02: Fixed AI insight generation resilience only: kept `gemini-3.5-flash` as the primary configured model, added one retry with stable fallback `gemini-3.1-flash-lite` for transient 5xx/high-demand responses, stored the successful model on draft insights, preserved tenant-scoped review validation and existing friendly `502` UI error behavior, and updated README. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-07-02: Fixed the AI Insight Generation Prisma insert bug without changing the schema or Gemini logic by switching the draft insight create path from scalar relation IDs to Prisma relation connects for agency, restaurant, location, creator, and source-review evidence. Tenant-scoped review validation remains before insert. Verified `npm run lint`, `npm run typecheck`, `npm run build`, and a rollback-only Prisma runtime create probe.
 - 2026-07-02: Implemented Reports only: added a tenant-scoped report service and `POST /api/reports`, created stored report snapshots from `APPROVED` insights only, enforced restaurant/location/date-range scope across linked source reviews, stored filters and approved insight summaries/source counts in the existing Prisma `Report` model without a schema migration, added `/reports` and `/reports/[reportId]`, and updated README. Verified `npm run lint`, `npm run typecheck`, `npm run build`, `npm test` placeholder output, and local route smoke checks for `/reports` and `/reports/not-a-uuid`.
 - 2026-07-02: Polished the Human Approval Workflow only: improved `/insights` status badges for Draft, Approved, and Rejected states; added decision timestamp, reviewer, audit note, and future-report eligibility display; locked reviewed insights from follow-up approval edits in the UI and API without changing Prisma schema; updated README. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-02: Implemented AI Insight Generation only: added Gemini-backed draft insight generation from selected tenant-scoped imported reviews, stored `Insight` records as `DRAFT` with model, prompt version, timestamp, confidence, source review count, and `InsightSourceReview` evidence links; added human approval/rejection API flow and `/insights` review page with supporting excerpts. Updated README; verified `npm run lint`, `npm run typecheck`, and `npm run build`.

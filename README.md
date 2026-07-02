@@ -242,6 +242,7 @@ AI insight generation uses the existing server-side Google Gemini integration. I
 - Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
 - Tenant behavior: every selected review must belong to the active agency, selected restaurant, optional location, and an approved review source.
 - Evidence behavior: every stored insight creates `InsightSourceReview` rows for the source reviews Gemini referenced, with excerpts copied from stored review text.
+- Model behavior: generation uses `gemini-3.5-flash` first and retries once with the stable fallback `gemini-3.1-flash-lite` only when Gemini returns a transient 5xx or high-demand response. Stored insight metadata records the model that successfully generated the draft.
 - Errors: `400` for invalid input or selected reviews outside the tenant/restaurant/source scope, `401` for missing context, `403` for read-only roles, `500` for missing `GOOGLE_AI_API_KEY`, and `502` for Gemini failures.
 
 ### Review Insight Status

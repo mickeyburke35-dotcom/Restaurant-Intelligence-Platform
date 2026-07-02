@@ -10,7 +10,6 @@ import { z } from "zod";
 import { badRequest, notFound } from "@/lib/api-errors";
 import {
   generateReviewInsightDrafts,
-  getReviewInsightModel,
   REVIEW_INSIGHT_PROMPT_VERSION,
   type ReviewInsightEvidence
 } from "@/lib/ai/review-insights";
@@ -380,7 +379,7 @@ export async function generateDraftInsights(
 
   const selectedReviewIdSet = new Set(selectedReviewIds);
   const evidenceByReviewId = new Map(reviews.map((review) => [review.id, review]));
-  const generatedInsights = await generateReviewInsightDrafts(
+  const generatedResult = await generateReviewInsightDrafts(
     reviews.map((review): ReviewInsightEvidence => ({
       id: review.id,
       locationName: formatLocationName(review.location),
@@ -395,6 +394,7 @@ export async function generateDraftInsights(
       title: review.title
     }))
   );
+  const generatedInsights = generatedResult.insights;
 
   const normalizedDrafts = generatedInsights.map((insight) => {
     const sourceReviewIds = Array.from(new Set(insight.sourceReviewIds));
@@ -421,7 +421,7 @@ export async function generateDraftInsights(
   }
 
   const inferredLocationId = inferInsightLocationId(reviews, input.locationId ?? null);
-  const model = getReviewInsightModel();
+  const model = generatedResult.model;
   const generatedAt = new Date();
 
   return prisma.$transaction(async (tx) => {
@@ -430,19 +430,45 @@ export async function generateDraftInsights(
     for (const insight of draftsWithEvidence) {
       const createdInsight = await tx.insight.create({
         data: {
-          agencyId: context.agencyId,
+          agency: {
+            connect: {
+              id: context.agencyId
+            }
+          },
           confidence:
             insight.confidence === null || insight.confidence === undefined
               ? null
               : new Prisma.Decimal(insight.confidence.toFixed(4)),
           confidenceLevel: insight.confidenceLevel,
-          createdByUserId: context.userId,
+          createdBy: {
+            connect: {
+              id: context.userId
+            }
+          },
           generatedAt,
           highImpact: insight.highImpact,
-          locationId: inferredLocationId,
+          ...(inferredLocationId
+            ? {
+                location: {
+                  connect: {
+                    id_agencyId: {
+                      agencyId: context.agencyId,
+                      id: inferredLocationId
+                    }
+                  }
+                }
+              }
+            : {}),
           model,
           promptVersion: REVIEW_INSIGHT_PROMPT_VERSION,
-          restaurantId: input.restaurantId,
+          restaurant: {
+            connect: {
+              id_agencyId: {
+                agencyId: context.agencyId,
+                id: input.restaurantId
+              }
+            }
+          },
           sentiment: insight.sentiment,
           sourceReviewCount: insight.sourceReviewIds.length,
           sourceReviews: {
@@ -454,9 +480,20 @@ export async function generateDraftInsights(
               }
 
               return {
-                agencyId: context.agencyId,
+                agency: {
+                  connect: {
+                    id: context.agencyId
+                  }
+                },
                 evidenceExcerpt: evidenceExcerpt(review),
-                reviewId
+                review: {
+                  connect: {
+                    id_agencyId: {
+                      agencyId: context.agencyId,
+                      id: reviewId
+                    }
+                  }
+                }
               };
             })
           },
