@@ -45,7 +45,7 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 
 ### AI
 
-- OpenAI API
+- Google Gemini API for current review summary and insight generation
 
 ### Hosting
 
@@ -102,8 +102,9 @@ For the lead capture API:
 - `SUPABASE_URL`: Supabase project URL used by the server route.
 - `SUPABASE_SERVICE_ROLE_KEY`: Server-only key used by `POST /api/demo/leads` to insert into `public.leads`.
 - `ZAPIER_LEAD_WEBHOOK_URL`: Server-only Zapier webhook URL notified after a successful lead insert.
+- `GOOGLE_AI_API_KEY`: Server-only Google AI key used by review summary and AI insight generation routes.
 
-Do not expose `SUPABASE_SERVICE_ROLE_KEY` or `ZAPIER_LEAD_WEBHOOK_URL` to client components or `NEXT_PUBLIC_` variables.
+Do not expose `SUPABASE_SERVICE_ROLE_KEY`, `ZAPIER_LEAD_WEBHOOK_URL`, or `GOOGLE_AI_API_KEY` to client components or `NEXT_PUBLIC_` variables.
 
 ### Development
 
@@ -223,6 +224,43 @@ All routes require an active agency request context. The current route integrati
 - Output: `{ data: ReviewSource }` with `deletedAt` set.
 - Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
 - Errors: `400` for invalid route input, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the source is outside the agency or already archived.
+
+---
+
+## AI Insight Generation APIs
+
+AI insight generation uses the existing server-side Google Gemini integration. It only uses explicitly selected imported reviews and stores generated output as draft evidence-linked insight records. It does not generate reports or competitor analysis.
+
+### Generate Draft Insights
+
+`POST /api/insights/generate`
+
+- Purpose: generate one or more draft AI insights from selected imported reviews.
+- JSON inputs: `restaurantId`, optional `locationId`, and `reviewIds` array with 1 to 50 review UUIDs.
+- Output: `{ data: Insight[] }` with `status = "DRAFT"`, model, prompt version, generated timestamp, confidence when returned, confidence level, source review count, and linked source reviews.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: every selected review must belong to the active agency, selected restaurant, optional location, and an approved review source.
+- Evidence behavior: every stored insight creates `InsightSourceReview` rows for the source reviews Gemini referenced, with excerpts copied from stored review text.
+- Errors: `400` for invalid input or selected reviews outside the tenant/restaurant/source scope, `401` for missing context, `403` for read-only roles, `500` for missing `GOOGLE_AI_API_KEY`, and `502` for Gemini failures.
+
+### Review Insight Status
+
+`PATCH /api/insights/:insightId`
+
+- Purpose: apply human review by approving or rejecting an AI insight.
+- JSON inputs: `status` as `APPROVED` or `REJECTED`, plus optional `reviewNotes`.
+- Output: `{ data: Insight }` with reviewer, review timestamp, approval status, and source evidence.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Approval behavior: insights can become `APPROVED` only through this human review endpoint, and approval requires at least one linked source review.
+- Errors: `400` for invalid input or missing source evidence, `401` for missing context, `403` for read-only roles, and `404` when the insight is outside the active agency.
+
+### AI Insight Review Page
+
+`GET /insights`
+
+- Purpose: review generated insight text, confidence, approval status, model metadata, source review count, and supporting review excerpts.
+- Users with insight permissions can select approved imported reviews and generate new draft insights from that selected evidence.
+- Viewer users can inspect permitted insight evidence but cannot generate, approve, or reject insights.
 
 ---
 

@@ -6,6 +6,7 @@ import {
   type Membership
 } from "@prisma/client";
 import { cookies, headers } from "next/headers";
+import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 export class AccessError extends Error {
@@ -27,10 +28,19 @@ export type AgencyRequestContext = {
   restaurantId: string | null;
 };
 
+export type RequestContext = AgencyRequestContext;
+
 const restaurantManagerRoles = new Set<MembershipRole>([
   MembershipRole.OWNER,
   MembershipRole.ADMIN,
   MembershipRole.MANAGER
+]);
+
+const reviewWorkflowRoles = new Set<MembershipRole>([
+  MembershipRole.OWNER,
+  MembershipRole.ADMIN,
+  MembershipRole.MANAGER,
+  MembershipRole.ANALYST
 ]);
 
 function normalizeHeaderValue(value: string | null): string | undefined {
@@ -83,6 +93,109 @@ function membershipToContext(
     role: membership.role,
     restaurantId: membership.restaurantId
   };
+}
+
+function getCookieValue(cookieHeader: string | null, name: string): string | undefined {
+  if (!cookieHeader) {
+    return undefined;
+  }
+
+  const cookie = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`));
+
+  if (!cookie) {
+    return undefined;
+  }
+
+  return decodeURIComponent(cookie.slice(name.length + 1));
+}
+
+async function findActiveMembershipContext(where: {
+  agencyId?: string;
+  membershipId?: string;
+  userEmail?: string;
+  userId?: string;
+}): Promise<RequestContext | null> {
+  const userFilters = [
+    where.userId ? { id: where.userId } : undefined,
+    where.userEmail ? { email: where.userEmail } : undefined
+  ].filter((filter): filter is { id: string } | { email: string } => Boolean(filter));
+
+  const membership = await prisma.membership.findFirst({
+    where: {
+      ...(where.agencyId ? { agencyId: where.agencyId } : {}),
+      ...(where.membershipId ? { id: where.membershipId } : {}),
+      status: MembershipStatus.ACTIVE,
+      deletedAt: null,
+      agency: {
+        status: AgencyStatus.ACTIVE,
+        deletedAt: null
+      },
+      user: {
+        status: UserStatus.ACTIVE,
+        deletedAt: null,
+        ...(userFilters.length > 0 ? { OR: userFilters } : {})
+      }
+    },
+    include: {
+      agency: {
+        select: {
+          name: true
+        }
+      },
+      user: {
+        select: {
+          email: true
+        }
+      }
+    },
+    orderBy: {
+      createdAt: "asc"
+    }
+  });
+
+  return membership ? membershipToContext(membership) : null;
+}
+
+export async function getRequestContext(request: Request): Promise<RequestContext> {
+  const sessionToken = getCookieValue(request.headers.get("cookie"), AUTH_COOKIE_NAME);
+  const session = await verifySessionToken(sessionToken);
+
+  if (session) {
+    const sessionContext = await findActiveMembershipContext({
+      agencyId: session.agencyId,
+      membershipId: session.membershipId,
+      userId: session.userId
+    });
+
+    if (sessionContext) {
+      return sessionContext;
+    }
+
+    throw new AccessError("No active agency membership was found for this session.", 403);
+  }
+
+  const agencyId = normalizeHeaderValue(request.headers.get("x-agency-id"));
+  const userId = normalizeHeaderValue(request.headers.get("x-user-id"));
+  const userEmail = normalizeHeaderValue(request.headers.get("x-user-email"))?.toLowerCase();
+
+  if (agencyId && (userId || userEmail)) {
+    const headerContext = await findActiveMembershipContext({
+      agencyId,
+      userEmail,
+      userId
+    });
+
+    if (!headerContext) {
+      throw new AccessError("No active agency membership was found for this request.", 403);
+    }
+
+    return headerContext;
+  }
+
+  return getActiveAgencyContext();
 }
 
 export async function getActiveAgencyContext(): Promise<AgencyRequestContext> {
@@ -182,5 +295,15 @@ export function canManageRestaurants(context: AgencyRequestContext): boolean {
 export function assertCanManageRestaurants(context: AgencyRequestContext): void {
   if (!canManageRestaurants(context)) {
     throw new AccessError("Your role cannot manage restaurants for this agency.", 403);
+  }
+}
+
+export function canManageReviewSources(context: RequestContext): boolean {
+  return reviewWorkflowRoles.has(context.role);
+}
+
+export function assertCanManageReviewSources(context: RequestContext): void {
+  if (!canManageReviewSources(context)) {
+    throw new AccessError("Your role cannot manage review source workflows for this agency.", 403);
   }
 }

@@ -16,14 +16,20 @@ export const runtime = "nodejs";
 
 type RouteContext = {
   params: Promise<{
-    restaurantId: string;
+    id: string;
   }>;
 };
+
+async function getRestaurantId(params: RouteContext["params"]) {
+  const { id } = await params;
+
+  return restaurantReviewSourceRouteParamsSchema.parse({ restaurantId: id }).restaurantId;
+}
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const context = await getRequestContext(request);
-    const { restaurantId } = restaurantReviewSourceRouteParamsSchema.parse(await params);
+    const restaurantId = await getRestaurantId(params);
     const query = parseListReviewSourcesQuery(request.nextUrl.searchParams);
     const data = await listReviewSources(context, {
       restaurantId,
@@ -41,7 +47,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const context = await getRequestContext(request);
     assertCanManageReviewSources(context);
 
-    const { restaurantId } = restaurantReviewSourceRouteParamsSchema.parse(await params);
+    const restaurantId = await getRestaurantId(params);
     const body = createReviewSourceSchema.parse(await readJsonRequest(request));
     const data = await createReviewSource(context, restaurantId, body);
 

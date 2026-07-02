@@ -2,7 +2,7 @@
 
 ## Current Work
 
-- AI Insight Generation implementation is active on `feature/ai-insights`.
+- No active sprint task captured yet.
 
 ## AI Insight Generation Plan
 
@@ -108,6 +108,7 @@
 
 ## Completed
 
+- 2026-07-02: Implemented AI Insight Generation only: added Gemini-backed draft insight generation from selected tenant-scoped imported reviews, stored `Insight` records as `DRAFT` with model, prompt version, timestamp, confidence, source review count, and `InsightSourceReview` evidence links; added human approval/rejection API flow and `/insights` review page with supporting excerpts. Updated README; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-02: Applied the lead notification webhook to the current branch with `POST /api/demo/leads`, server-side Supabase lead insertion, `ZAPIER_LEAD_WEBHOOK_URL` configuration, and fire-and-forget Zapier delivery containing `email`, `source`, and `created_at`; webhook failures are logged without failing lead capture. Updated README and `.env.example`; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-01: Added the post-GitHub-push security-audit workflow rule and checklist to `AGENTS.md` and `README.md`, including required pass/fail reporting, files checked, findings, remediation guidance, secret search terms, `.env` checks, screenshot checks, Popstop/Videoreport artifact checks, and intended-file confirmation. No application code or dependencies were changed.
 - 2026-07-01: Implemented Review Sources only: tenant-scoped list/create/edit/soft archive API routes and service layer using the existing Prisma schema, Zod validation, restaurant/location ownership checks, and no scraping, external API calls, review import, dashboards, or AI insight storage. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
