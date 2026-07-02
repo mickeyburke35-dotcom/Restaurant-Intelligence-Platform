@@ -2,7 +2,15 @@
 
 ## Current Work
 
-- No active sprint task captured yet.
+- AI Insight Generation implementation is active on `feature/ai-insights`.
+
+## AI Insight Generation Plan
+
+1. Add missing shared API/context helper exports required by the existing review-source and review-import routes without changing the tenant model.
+2. Add a tenant-scoped insight service that selects only requested imported reviews, calls the existing Gemini integration, stores draft `Insight` records, and creates `InsightSourceReview` evidence links for every source review used.
+3. Add Zod-validated API routes for draft generation and human approval/rejection while keeping all generated insights in `DRAFT` until explicitly approved.
+4. Add an AI Insight Review page that lists draft/approved insights with text, confidence, status, source review count, model metadata, and supporting review excerpts.
+5. Update README API/UI documentation and verify lint, typecheck, and build.
 
 ## Zapier Lead Notification Plan
 
