@@ -47,6 +47,7 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 ### AI
 
 - OpenAI API
+- Google AI Studio / Gemini for the first review-summary test endpoint
 
 ### Hosting
 
@@ -97,6 +98,8 @@ npm install
 ### Environment Variables
 
 All required environment variables are documented in `.env.example`. Keep secrets, API keys, tokens, customer data, and production credentials out of source control.
+
+`GOOGLE_AI_API_KEY` is used server-side by the Gemini review-summary endpoint. Do not prefix it with `NEXT_PUBLIC_`, and do not expose it to browser code.
 
 ### Development
 
@@ -240,6 +243,21 @@ All routes require an active agency request context. The current route integrati
 - AI insights must remain traceable to source reviews with supporting evidence.
 - Insights should include model, timestamp, confidence, and source references when available.
 - High-impact recommendations and client-facing narratives require human review before presentation as business advice.
+
+---
+
+## AI Review Summary Endpoint
+
+`POST /api/ai/review-summary` generates a draft review summary using Google AI Studio / Gemini.
+
+- Purpose: summarize fictional restaurant review text, classify sentiment, and identify key themes for local testing.
+- Request body: `{ "reviewText": "..." }`
+- Response body: `{ "summary": "...", "sentiment": "positive|neutral|negative|mixed|unknown", "keyThemes": ["..."] }`
+- Auth requirements: none yet; this endpoint does not read or write tenant data and must only be used with fictional review text until auth and approved-source flows are added.
+- Error cases: invalid JSON, empty review text, missing `GOOGLE_AI_API_KEY`, Gemini API failure, or invalid AI output shape.
+- Persistence: AI output is validated and returned to the caller, but it is not saved to the database.
+
+Test UI: run `npm run dev` and open `/ai/review-summary`.
 
 ---
 
