@@ -9,9 +9,14 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests configured yet.\"",
+    "seed": "prisma db seed",
+    "seed:run": "tsc prisma/seed.ts --target ES2022 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir dist/prisma-seed --rootDir prisma && node dist/prisma-seed/seed.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "npm run seed:run"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",

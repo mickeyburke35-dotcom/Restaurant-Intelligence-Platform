@@ -2,21 +2,97 @@
 
 ## Current Work
 
-- No active sprint task captured yet.
+- 2026-06-30: Fill out the AI Startup Validation Board from existing Restaurant Intelligence Platform documentation.
+- 2026-06-30: Implement database seeding for fictional Restaurant Intelligence Platform demo data.
+- 2026-06-30: Update today's checklist from current repository evidence only.
+- 2026-06-30: Implement authentication only for the Restaurant Intelligence Platform.
 
-## GitHub Push Security Review Workflow Plan
+## AI Startup Validation Board Plan
 
-1. Add the post-push security-audit rule to `AGENTS.md` under Workflow.
-2. Add the same workflow rule and checklist to the README development workflow because it documents workflow rules.
-3. Keep the change documentation-only: no application code, dependencies, destructive commands, or unrelated edits.
-4. Re-read the changed sections and record completion notes.
+1. Use only `README.md`, `PRD.md`, `DESIGN.md`, `ARCHITECTURE.md`, `AI_BEHAVIOUR.md`, `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, `ONBOARDING_FRICTION_REPORT.md`, and existing project memory as evidence.
+2. Complete the requested Validation Board sections without inventing customer statistics, market sizes, adoption rates, survey results, or unsupported claims.
+3. Keep the work documentation-only and avoid application code, architecture changes, dependency changes, schema edits, data-collection changes, or AI behavior changes.
+4. Record completion in this todo file after producing the final Markdown board.
 
-## Review Sources Implementation Plan
+## Database Seed Implementation Plan
 
-1. Add tenant-scoped review source service functions for list, create, edit, and soft archive/disconnect using the existing Prisma `ReviewSource` model.
-2. Add Zod-validated Next.js API routes for restaurant-scoped list/create and source-scoped edit/archive actions.
-3. Keep behavior limited to source configuration records: no scraping, external provider calls, review import, dashboards, or AI insight storage.
-4. Update README API documentation and record completion notes after lint, typecheck, and build verification.
+1. Add `prisma/seed.ts` with idempotent fictional demo records for two isolated agencies, four users, role memberships, restaurants, locations, approved sources, reviews, and draft source-linked AI insights.
+2. Keep every business record tenant-scoped with `agency_id` and clearly mark review/source content as fictional seed data, not real restaurant data.
+3. Add a package seed command that runs through Prisma without introducing new dependencies.
+4. Verify the seed script runs successfully against the configured local database, then record the outcome.
+
+## Authentication Implementation Plan
+
+1. Keep the slice schema-neutral and dependency-neutral by using existing `User`, `Agency`, and `Membership` records for database-backed email sign-in.
+2. Add signed httpOnly session cookies, sign-in and sign-out API routes, and a session API route that returns only the active authenticated context.
+3. Resolve active agency and membership role server-side on each protected request from an active user, active membership, and active agency.
+4. Add middleware for protected workspace routes and redirect unauthenticated users to the sign-in page with a safe return path.
+5. Add an authentication layout, sign-in page, protected workspace status page, and sign-out control without implementing dashboards, restaurants, reviews, AI, or reports.
+6. Document the auth routes and new environment variable, then verify with `npm run lint`, `npm run typecheck`, and `npm run build`.
+
+## Static Landing Page Implementation Plan
+
+1. Use `PRD.md`, `DESIGN.md`, `README.md`, `AGENTS.md`, and the copywriting skill for positioning, visual direction, and copy constraints.
+2. Add a new static marketing route at `app/landing/page.tsx` without replacing the existing app shell or changing architecture.
+3. Build the required sections: hero, problem, product workflow, AI trust, target users, CTA, and footer using the documented Scandinavian B2B SaaS palette and concrete evidence-led copy.
+4. Avoid banned language, restaurant-themed clichés, purple gradients, glassmorphism, invented statistics, unsupported claims, and architecture changes.
+5. Verify with `npm run lint`, `npm run typecheck`, and `npm run build`, then record completion notes.
+
+## Today's Checklist Update Plan
+
+1. Use repository files, installed skill folders, Git remote configuration, and Git history as the source of truth.
+2. Mark items complete only when there is clear local evidence.
+3. Leave account administration, contributor invites, uploads, domain setup, and unverified summary items unchecked.
+
+## Today's Checklist - 2026-06-30
+
+- [x] Finalise `ARCHITECTURE.md` (file exists and documents the canonical architecture).
+- [x] Finalise at least one specialist agent for my project (`AGENT_BLUEPRINT.md` exists for the Review Insight Analyst Agent).
+- [x] Install Copywriting skill (`.agents/skills/copywriting/SKILL.md` exists).
+- [x] Create account on GitHub (`SUBMISSION.md` records restored GitHub access for `mickeyburke35-dotcom`; Git remote uses that owner).
+- [x] Create a project repo (`origin` points to `https://github.com/mickeyburke35-dotcom/Restaurant-Intelligence-Platform.git`).
+- [ ] Add all team members as contributors (not verified from local repository state).
+- [ ] Add professor as contributor (`SUBMISSION.md` says the invite is not verified as sent).
+- [x] Create `README.md`.
+- [x] Connect GitHub to Codex (`SUBMISSION.md` records Codex connected; referenced screenshot is not present under `evidence/`).
+- [x] One team member commits `ARCHITECTURE.md` (Git history shows commit `30f9789`).
+- [ ] A different team member commits the specialist agent `.md` (not verified as a different contributor from local Git history).
+- [x] Generate static landing page (`app/page.tsx` provides the current static app shell).
+- [ ] Upload files to Google AI Studio (not verified from local repository state).
+- [ ] Upload files to at least one other tool (not verified from local repository state).
+- [ ] Get a domain for the project (not verified from local repository state).
+- [ ] Get a GitHub summary (no explicit GitHub summary artifact found).
+
+## Codex Architecture Review Evidence Plan
+
+1. Create `evidence/codex-architecture-review.md` summarizing Questions 1-4 from the repository architecture review.
+2. Keep the work documentation-only: no app code, API routes, schema edits, dependencies, or runtime configuration changes.
+3. Record completion after verifying the new evidence file and todo update.
+
+## Reliability And Evaluation Documentation Plan
+
+1. Use `PRD.md`, `AI_BEHAVIOUR.md`, `AGENT_BLUEPRINT.md`, `ARCHITECTURE.md`, and `prisma/schema.prisma` as source of truth.
+2. Create `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, and `ONBOARDING_FRICTION_REPORT.md` in the project root only.
+3. Keep the work documentation-only: no app features, API routes, schema edits, dependencies, or unrelated files.
+4. Record completion after verifying the requested files and todo update.
+
+## Session 12 Agent Team Handoff Plan
+
+1. Create `AGENT_TEAM_HANDOFF.md` as a design-only course exercise document.
+2. Define the four PopStop agent roles, inputs, outputs, handoff order, 95/100 scoring gate, and final launch pack.
+3. Verify only the requested documentation files changed, then record completion.
+
+## Faculty Collaborator Invite Check Plan
+
+1. Check repository evidence for collaborator invitation status.
+2. Mark `SUBMISSION.md` complete only if the collaborator invite has been sent.
+3. Add a short completion note to this file.
+
+## Submission Checklist Update Plan
+
+1. Use the current repository state and requested submission status as the source of truth.
+2. Update only `SUBMISSION.md` for checklist and GitHub status changes.
+3. Record the completion note in this todo file after verifying the final checklist.
 
 ## Prisma Initial Migration Plan
 
@@ -89,12 +165,20 @@
 
 ## Blocked
 
+- 2026-06-30: Full database seed execution is blocked by the configured `.env` database credentials. A network-approved `npm run seed` reached `aws-1-eu-west-2.pooler.supabase.com:6543`, but Prisma reported that the provided `postgres` credentials are not valid. No local PostgreSQL listener, PostgreSQL CLI, Docker, or Podman runtime is available in this workspace to verify against the documented local example database.
 - 2026-06-29: Initial Prisma migration is blocked because local PostgreSQL is not reachable at the documented `.env.example` URL. `npx prisma validate` and `npx prisma generate` passed with the documented `DATABASE_URL`; `npx prisma migrate dev --name init` failed before creating a migration, and a localhost port check found no listener on port 5432.
 
 ## Completed
 
-- 2026-07-01: Added the post-GitHub-push security-audit workflow rule and checklist to `AGENTS.md` and `README.md`, including required pass/fail reporting, files checked, findings, remediation guidance, secret search terms, `.env` checks, screenshot checks, Popstop/Videoreport artifact checks, and intended-file confirmation. No application code or dependencies were changed.
-- 2026-07-01: Implemented Review Sources only: tenant-scoped list/create/edit/soft archive API routes and service layer using the existing Prisma schema, Zod validation, restaurant/location ownership checks, and no scraping, external API calls, review import, dashboards, or AI insight storage. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-06-30: Added idempotent fictional database seeding in `prisma/seed.ts` for 2 agencies, 4 users, Owner/Manager/Analyst/Viewer memberships, 4 restaurants, 8 locations, 8 approved fictional CSV review sources, 16 clearly fictional public reviews, and 4 draft AI insights linked to source reviews; added `npm run seed` and Prisma seed wiring in `package.json`; documented the seed command in `README.md`; added `dist/**` to ESLint ignores for transient seed build output; verified `npm run lint`, `npm run typecheck`, and `npx prisma validate`. Full seed write verification remains blocked by invalid configured database credentials.
+- 2026-06-30: Completed the AI Startup Validation Board for the Restaurant Intelligence Platform from existing project documentation only; no application code, architecture changes, dependency changes, schema edits, data-collection changes, AI behavior changes, or unrelated files were modified.
+- 2026-06-30: Implemented authentication only: database-backed email sign-in against active users and memberships, signed httpOnly session cookies, sign-out, session API, middleware-protected `/workspace`, active agency and role resolution, authentication layout, protected workspace status page, README auth route documentation, and `AUTH_SESSION_SECRET` in `.env.example`; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-06-30: Created the static Restaurant Intelligence Platform landing page at `app/landing/page.tsx` with hero, problem, workflow, AI trust, target user, CTA, and footer sections; preserved the existing app shell and architecture; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-06-30: Created `evidence/codex-architecture-review.md` summarizing Codex architecture review Questions 1-4 with ranked missing components, top technical tasks, risk mitigations, and final implementation priorities; no application code was modified.
+- 2026-06-30: Created `RELIABILITY_CHECKLIST.md`, `PRODUCT_EVALUATION.md`, and `ONBOARDING_FRICTION_REPORT.md` for Review Insight Generation reliability risks, end-to-end product evaluation scenarios, and first-time onboarding friction tracking; no app features, API routes, schema edits, dependencies, or unrelated files were changed.
+- 2026-06-30: Created `AGENT_TEAM_HANDOFF.md` documenting the Session 12 PopStop-style agent team handoff exercise, including agent roles, tasks, model reasoning levels, inputs, outputs, handoff order, 95/100 scoring gate, and final approved launch pack output.
+- 2026-06-29: Checked available repository evidence for the faculty collaborator invite; no sent invite was verified, so `SUBMISSION.md` keeps the item unchecked with an explicit status note.
+- 2026-06-29: Updated `SUBMISSION.md` for Deliverable 2 status, checked the canonical folders, README, branch, Codex connection, `d2-ready` tag, and repository link items per the requested submission status, replaced the GitHub suspension note with the restored `mickeyburke35-dotcom` account status, and left only "Faculty invited as collaborators" incomplete.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.

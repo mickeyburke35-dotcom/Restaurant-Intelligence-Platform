@@ -9,6 +9,12 @@ export default function Home() {
         <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
           Initial application shell for tenant-scoped product work.
         </p>
+        <a
+          className="mt-8 inline-flex h-10 w-fit items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-[#174E44] focus:outline-none focus:ring-2 focus:ring-[#D9EA75] focus:ring-offset-2 focus:ring-offset-canvas active:translate-y-px"
+          href="/sign-in"
+        >
+          Sign in
+        </a>
       </section>
     </main>
   );
