@@ -2,103 +2,185 @@ import {
   AgencyStatus,
   MembershipRole,
   MembershipStatus,
-  UserStatus
+  UserStatus,
+  type Membership
 } from "@prisma/client";
-import { z } from "zod";
-import { badRequest, forbidden, unauthorized } from "@/lib/api-errors";
+import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-const agencyHeader = "x-agency-id";
-const userHeader = "x-user-id";
+export class AccessError extends Error {
+  constructor(
+    message: string,
+    readonly statusCode: 401 | 403 = 401
+  ) {
+    super(message);
+    this.name = "AccessError";
+  }
+}
 
-const uuidSchema = z.string().uuid();
-
-const writeRoles = new Set<MembershipRole>([
-  MembershipRole.OWNER,
-  MembershipRole.ADMIN,
-  MembershipRole.MANAGER,
-  MembershipRole.ANALYST
-]);
-
-export type RequestContext = {
+export type AgencyRequestContext = {
   agencyId: string;
+  agencyName: string;
+  userId: string;
+  userEmail: string;
   role: MembershipRole;
-  userId: string | null;
+  restaurantId: string | null;
 };
 
-function requireUuidHeader(headers: Headers, headerName: string): string {
-  const value = headers.get(headerName);
+const restaurantManagerRoles = new Set<MembershipRole>([
+  MembershipRole.OWNER,
+  MembershipRole.ADMIN,
+  MembershipRole.MANAGER
+]);
 
-  if (!value) {
-    throw unauthorized(`Missing ${headerName} request context.`);
-  }
-
-  const parsed = uuidSchema.safeParse(value);
-
-  if (!parsed.success) {
-    throw badRequest(`${headerName} must be a valid UUID.`);
-  }
-
-  return parsed.data;
+function normalizeHeaderValue(value: string | null): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
-function optionalUuidHeader(headers: Headers, headerName: string): string | null {
-  const value = headers.get(headerName);
-
-  if (!value) {
-    return null;
-  }
-
-  const parsed = uuidSchema.safeParse(value);
-
-  if (!parsed.success) {
-    throw badRequest(`${headerName} must be a valid UUID.`);
-  }
-
-  return parsed.data;
+function firstAvailableValue(values: Array<string | undefined>): string | undefined {
+  return values.find((value) => value !== undefined);
 }
 
-export async function getRequestContext(request: Request): Promise<RequestContext> {
-  const agencyId = requireUuidHeader(request.headers, agencyHeader);
-  const userId = optionalUuidHeader(request.headers, userHeader);
+async function getRequestIdentity() {
+  const headerStore = await headers();
+  const cookieStore = await cookies();
 
-  if (!userId) {
-    throw unauthorized(`Missing ${userHeader} request context.`);
-  }
+  const userEmail = firstAvailableValue([
+    normalizeHeaderValue(headerStore.get("x-user-email")),
+    normalizeHeaderValue(headerStore.get("x-authenticated-user-email")),
+    normalizeHeaderValue(headerStore.get("x-supabase-user-email")),
+    normalizeHeaderValue(cookieStore.get("restaurant_intelligence_user_email")?.value ?? null),
+    normalizeHeaderValue(cookieStore.get("authenticated_user_email")?.value ?? null),
+    normalizeHeaderValue(process.env.RESTAURANT_INTELLIGENCE_USER_EMAIL ?? null)
+  ])?.toLowerCase();
 
-  const membership = await prisma.membership.findFirst({
-    where: {
-      agencyId,
-      userId,
-      deletedAt: null,
-      status: MembershipStatus.ACTIVE,
-      agency: {
-        deletedAt: null,
-        status: AgencyStatus.ACTIVE
-      },
-      user: {
-        deletedAt: null,
-        status: UserStatus.ACTIVE
-      }
-    },
-    select: {
-      role: true
-    }
-  });
-
-  if (!membership) {
-    throw forbidden("Active agency membership is required.");
-  }
+  const userId = firstAvailableValue([
+    normalizeHeaderValue(headerStore.get("x-user-id")),
+    normalizeHeaderValue(headerStore.get("x-authenticated-user-id")),
+    normalizeHeaderValue(headerStore.get("x-supabase-user-id")),
+    normalizeHeaderValue(cookieStore.get("restaurant_intelligence_user_id")?.value ?? null),
+    normalizeHeaderValue(process.env.RESTAURANT_INTELLIGENCE_USER_ID ?? null)
+  ]);
 
   return {
-    agencyId,
-    role: membership.role,
+    userEmail,
     userId
   };
 }
 
-export function assertCanManageReviewSources(context: RequestContext): void {
-  if (!writeRoles.has(context.role)) {
-    throw forbidden("Review source changes require an agency editor role.");
+function membershipToContext(
+  membership: Pick<Membership, "agencyId" | "userId" | "role" | "restaurantId"> & {
+    agency: { name: string };
+    user: { email: string };
+  }
+): AgencyRequestContext {
+  return {
+    agencyId: membership.agencyId,
+    agencyName: membership.agency.name,
+    userId: membership.userId,
+    userEmail: membership.user.email,
+    role: membership.role,
+    restaurantId: membership.restaurantId
+  };
+}
+
+export async function getActiveAgencyContext(): Promise<AgencyRequestContext> {
+  const identity = await getRequestIdentity();
+  const userFilters = [
+    identity.userId ? { id: identity.userId } : undefined,
+    identity.userEmail ? { email: identity.userEmail } : undefined
+  ].filter((filter): filter is { id: string } | { email: string } => Boolean(filter));
+
+  if (userFilters.length > 0) {
+    const membership = await prisma.membership.findFirst({
+      where: {
+        status: MembershipStatus.ACTIVE,
+        deletedAt: null,
+        agency: {
+          status: AgencyStatus.ACTIVE,
+          deletedAt: null
+        },
+        user: {
+          status: UserStatus.ACTIVE,
+          deletedAt: null,
+          OR: userFilters
+        }
+      },
+      include: {
+        agency: {
+          select: {
+            name: true
+          }
+        },
+        user: {
+          select: {
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: "asc"
+      }
+    });
+
+    if (!membership) {
+      throw new AccessError("No active agency membership was found for this user.", 403);
+    }
+
+    return membershipToContext(membership);
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new AccessError("Sign in to access restaurant management.", 401);
+  }
+
+  const fallbackMembership = await prisma.membership.findFirst({
+    where: {
+      status: MembershipStatus.ACTIVE,
+      deletedAt: null,
+      role: {
+        in: [MembershipRole.OWNER, MembershipRole.ADMIN, MembershipRole.MANAGER]
+      },
+      agency: {
+        status: AgencyStatus.ACTIVE,
+        deletedAt: null
+      },
+      user: {
+        status: UserStatus.ACTIVE,
+        deletedAt: null
+      }
+    },
+    include: {
+      agency: {
+        select: {
+          name: true
+        }
+      },
+      user: {
+        select: {
+          email: true
+        }
+      }
+    },
+    orderBy: {
+      createdAt: "asc"
+    }
+  });
+
+  if (!fallbackMembership) {
+    throw new AccessError("No active agency membership is available for restaurant management.", 401);
+  }
+
+  return membershipToContext(fallbackMembership);
+}
+
+export function canManageRestaurants(context: AgencyRequestContext): boolean {
+  return restaurantManagerRoles.has(context.role) && context.restaurantId === null;
+}
+
+export function assertCanManageRestaurants(context: AgencyRequestContext): void {
+  if (!canManageRestaurants(context)) {
+    throw new AccessError("Your role cannot manage restaurants for this agency.", 403);
   }
 }

@@ -206,6 +206,20 @@ All routes require an active agency request context. The current route integrati
 
 ---
 
+## Restaurant API Routes
+
+Restaurant CRUD is implemented with agency-scoped Next.js route handlers:
+
+- `GET /api/restaurants`: lists restaurants for the signed-in user agency. Query parameters: `q` and `status` (`ALL`, `ACTIVE`, `PAUSED`, or `ARCHIVED`).
+- `POST /api/restaurants`: creates one restaurant. Body fields: `name`, `segment`, `cuisine`, `websiteUrl`, `notes`, and `status`.
+- `GET /api/restaurants/:id`: returns one non-archived restaurant only when it belongs to the active agency.
+- `PATCH /api/restaurants/:id`: updates one non-archived restaurant with the same fields used by create.
+- `DELETE /api/restaurants/:id`: archives one restaurant by setting `status` to `ARCHIVED` and `deletedAt` to the current timestamp.
+
+All routes resolve an active agency membership before accessing restaurant data, validate input with Zod, and return user-safe `400`, `401`, `403`, `404`, `409`, or `500` errors. Local development may use `RESTAURANT_INTELLIGENCE_USER_EMAIL` or `RESTAURANT_INTELLIGENCE_USER_ID` to select a seeded user; non-production requests without an identity fall back to the first active manager-level membership.
+
+---
+
 ## AI Principles
 
 - AI assists users; it does not replace human decision-making.
