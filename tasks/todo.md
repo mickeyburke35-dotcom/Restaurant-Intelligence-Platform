@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Human Approval Workflow Polish Plan
+
+1. Improve the `/insights` review UI with clearer Draft, Approved, and Rejected status badges, approval/rejection timestamps, reviewer display, and report-eligibility guidance.
+2. Add an audit-style decision panel and note field for approval or rejection without adding report, competitor, AI behavior, or schema changes.
+3. Lock reviewed insights against accidental follow-up edits in the UI and API while preserving tenant-scoped review handling.
+4. Update README documentation and verify `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## AI Insight Generation Plan
 
 1. Add missing shared API/context helper exports required by the existing review-source and review-import routes without changing the tenant model.
@@ -108,6 +115,7 @@
 
 ## Completed
 
+- 2026-07-02: Polished the Human Approval Workflow only: improved `/insights` status badges for Draft, Approved, and Rejected states; added decision timestamp, reviewer, audit note, and future-report eligibility display; locked reviewed insights from follow-up approval edits in the UI and API without changing Prisma schema; updated README. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-02: Implemented AI Insight Generation only: added Gemini-backed draft insight generation from selected tenant-scoped imported reviews, stored `Insight` records as `DRAFT` with model, prompt version, timestamp, confidence, source review count, and `InsightSourceReview` evidence links; added human approval/rejection API flow and `/insights` review page with supporting excerpts. Updated README; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-02: Applied the lead notification webhook to the current branch with `POST /api/demo/leads`, server-side Supabase lead insertion, `ZAPIER_LEAD_WEBHOOK_URL` configuration, and fire-and-forget Zapier delivery containing `email`, `source`, and `created_at`; webhook failures are logged without failing lead capture. Updated README and `.env.example`; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-01: Added the post-GitHub-push security-audit workflow rule and checklist to `AGENTS.md` and `README.md`, including required pass/fail reporting, files checked, findings, remediation guidance, secret search terms, `.env` checks, screenshot checks, Popstop/Videoreport artifact checks, and intended-file confirmation. No application code or dependencies were changed.

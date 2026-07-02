@@ -251,8 +251,10 @@ AI insight generation uses the existing server-side Google Gemini integration. I
 - JSON inputs: `status` as `APPROVED` or `REJECTED`, plus optional `reviewNotes`.
 - Output: `{ data: Insight }` with reviewer, review timestamp, approval status, and source evidence.
 - Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
-- Approval behavior: insights can become `APPROVED` only through this human review endpoint, and approval requires at least one linked source review.
-- Errors: `400` for invalid input or missing source evidence, `401` for missing context, `403` for read-only roles, and `404` when the insight is outside the active agency.
+- Approval behavior: only `DRAFT` insights can be approved or rejected. Approved and rejected insights are locked for auditability, and approval requires at least one linked source review.
+- Audit behavior: approval and rejection store the reviewer, decision timestamp, status, and optional decision note on the insight record.
+- Report behavior: only `APPROVED` insights are marked as eligible for future report workflows. Reports are not implemented in this slice.
+- Errors: `400` for invalid input, missing source evidence, or attempts to edit a reviewed insight, `401` for missing context, `403` for read-only roles, and `404` when the insight is outside the active agency.
 
 ### AI Insight Review Page
 
@@ -260,6 +262,7 @@ AI insight generation uses the existing server-side Google Gemini integration. I
 
 - Purpose: review generated insight text, confidence, approval status, model metadata, source review count, and supporting review excerpts.
 - Users with insight permissions can select approved imported reviews and generate new draft insights from that selected evidence.
+- The page displays clear Draft, Approved, and Rejected badges, reviewer details when available, decision timestamps, decision notes, and future report eligibility.
 - Viewer users can inspect permitted insight evidence but cannot generate, approve, or reject insights.
 
 ---

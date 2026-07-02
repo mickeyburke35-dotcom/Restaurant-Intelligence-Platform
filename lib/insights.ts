@@ -509,12 +509,17 @@ export async function reviewInsightStatus(
     },
     select: {
       id: true,
-      sourceReviewCount: true
+      sourceReviewCount: true,
+      status: true
     }
   });
 
   if (!currentInsight) {
     throw notFound("Insight not found.");
+  }
+
+  if (currentInsight.status !== InsightStatus.DRAFT) {
+    throw badRequest("Only draft insights can be approved or rejected. Reviewed insights are locked.");
   }
 
   if (input.status === InsightStatus.APPROVED && currentInsight.sourceReviewCount < 1) {

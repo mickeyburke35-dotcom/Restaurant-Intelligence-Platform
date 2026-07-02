@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 export type InsightReviewSourceView = {
@@ -102,6 +102,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   hour: "numeric",
   minute: "2-digit",
+  timeZoneName: "short",
   timeZone: "UTC"
 });
 
@@ -136,14 +137,48 @@ function formatConfidence(confidence: number | null, confidenceLevel: string | n
 function statusClassName(status: string): string {
   switch (status) {
     case "APPROVED":
-      return "border-[#b9d4c1] bg-[#edf7ef] text-positive";
+      return "border-[#9cc7a9] bg-[#edf7ef] text-positive";
     case "REJECTED":
-      return "border-[#e7bbb8] bg-[#fff1ef] text-negative";
+      return "border-[#e3aaa5] bg-[#fff1ef] text-negative";
     case "DRAFT":
-      return "border-[#ead7a7] bg-[#fff8e8] text-mixed";
+      return "border-[#d8c27f] bg-[#fff8e8] text-mixed";
     default:
       return "border-line bg-snow text-muted";
   }
+}
+
+function statusLabel(status: string): string {
+  switch (status) {
+    case "DRAFT":
+      return "Draft";
+    case "APPROVED":
+      return "Approved";
+    case "REJECTED":
+      return "Rejected";
+    default:
+      return formatEnum(status);
+  }
+}
+
+function decisionLabel(status: string): string {
+  switch (status) {
+    case "APPROVED":
+      return "Approved";
+    case "REJECTED":
+      return "Rejected";
+    default:
+      return "Pending";
+  }
+}
+
+function reportEligibilityLabel(status: string): string {
+  return status === "APPROVED" ? "Future reports" : "Not report eligible";
+}
+
+function reportEligibilityClassName(status: string): string {
+  return status === "APPROVED"
+    ? "border-[#9cc7a9] bg-[#edf7ef] text-positive"
+    : "border-line bg-snow text-muted";
 }
 
 function sentimentClassName(sentiment: string): string {
@@ -196,6 +231,9 @@ export function InsightReviewWorkspace({
 
   const selectedInsight =
     data.insights.find((insight) => insight.id === selectedInsightId) ?? data.insights[0] ?? null;
+  const selectedInsightIsDraft = selectedInsight?.status === "DRAFT";
+  const selectedInsightHasDecision =
+    selectedInsight?.status === "APPROVED" || selectedInsight?.status === "REJECTED";
 
   const visibleLocations = useMemo(
     () => data.locations.filter((location) => location.restaurantId === selectedRestaurantId),
@@ -215,9 +253,14 @@ export function InsightReviewWorkspace({
 
   const draftCount = data.insights.filter((insight) => insight.status === "DRAFT").length;
   const approvedCount = data.insights.filter((insight) => insight.status === "APPROVED").length;
+  const rejectedCount = data.insights.filter((insight) => insight.status === "REJECTED").length;
   const selectedRestaurant = data.restaurants.find(
     (restaurant) => restaurant.id === selectedRestaurantId
   );
+
+  useEffect(() => {
+    setReviewNotes("");
+  }, [selectedInsightId]);
 
   function toggleReview(reviewId: string) {
     setSelectedReviewIds((current) =>
@@ -320,10 +363,11 @@ export function InsightReviewWorkspace({
             <div>
               <h1 className="text-3xl font-semibold sm:text-4xl">AI Insight Review</h1>
               <p className="mt-3 max-w-3xl text-base leading-7 text-muted">
-                Review generated insights with source evidence before approval.
+                Review generated insights with source evidence before approval. Only approved
+                insights are marked for future report use.
               </p>
             </div>
-            <div className="grid gap-2 text-sm sm:grid-cols-3">
+            <div className="grid gap-2 text-sm sm:grid-cols-4">
               <div className="rounded-md border border-line bg-white px-4 py-3">
                 <span className="block text-xs font-semibold uppercase text-muted">Total</span>
                 <span className="mt-1 block text-xl font-semibold">{data.insights.length}</span>
@@ -336,6 +380,12 @@ export function InsightReviewWorkspace({
                 <span className="block text-xs font-semibold uppercase text-muted">Approved</span>
                 <span className="mt-1 block text-xl font-semibold text-positive">
                   {approvedCount}
+                </span>
+              </div>
+              <div className="rounded-md border border-[#e3aaa5] bg-[#fff1ef] px-4 py-3">
+                <span className="block text-xs font-semibold uppercase text-muted">Rejected</span>
+                <span className="mt-1 block text-xl font-semibold text-negative">
+                  {rejectedCount}
                 </span>
               </div>
             </div>
@@ -495,13 +545,20 @@ export function InsightReviewWorkspace({
                           insight.status
                         )}`}
                       >
-                        {formatEnum(insight.status)}
+                        {statusLabel(insight.status)}
                       </span>
                     </span>
                     <span className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
                       <span>{formatEnum(insight.type)}</span>
                       <span>{formatConfidence(insight.confidence, insight.confidenceLevel)}</span>
                       <span>{insight.sourceReviewCount} reviews</span>
+                      <span
+                        className={`rounded-md border px-2 py-0.5 font-semibold ${reportEligibilityClassName(
+                          insight.status
+                        )}`}
+                      >
+                        {reportEligibilityLabel(insight.status)}
+                      </span>
                     </span>
                   </button>
                 ))}
@@ -525,7 +582,14 @@ export function InsightReviewWorkspace({
                         selectedInsight.status
                       )}`}
                     >
-                      {formatEnum(selectedInsight.status)}
+                      {statusLabel(selectedInsight.status)}
+                    </span>
+                    <span
+                      className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${reportEligibilityClassName(
+                        selectedInsight.status
+                      )}`}
+                    >
+                      {reportEligibilityLabel(selectedInsight.status)}
                     </span>
                     <span
                       className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${sentimentClassName(
@@ -598,7 +662,7 @@ export function InsightReviewWorkspace({
                 <dl className="grid content-start gap-3 text-sm">
                   <div className="rounded-md border border-line bg-snow px-3 py-2">
                     <dt className="font-medium text-muted">Approval status</dt>
-                    <dd className="mt-1 font-semibold">{formatEnum(selectedInsight.status)}</dd>
+                    <dd className="mt-1 font-semibold">{statusLabel(selectedInsight.status)}</dd>
                   </div>
                   <div className="rounded-md border border-line bg-snow px-3 py-2">
                     <dt className="font-medium text-muted">Prompt version</dt>
@@ -607,17 +671,70 @@ export function InsightReviewWorkspace({
                     </dd>
                   </div>
                   <div className="rounded-md border border-line bg-snow px-3 py-2">
-                    <dt className="font-medium text-muted">Reviewed</dt>
+                    <dt className="font-medium text-muted">Report use</dt>
                     <dd className="mt-1 font-semibold">
-                      {selectedInsight.reviewedAt
-                        ? `${formatDateTime(selectedInsight.reviewedAt)} by ${
-                            selectedInsight.reviewedBy ?? "recorded user"
-                          }`
-                        : "Awaiting review"}
+                      {selectedInsight.status === "APPROVED"
+                        ? "Eligible for future reports"
+                        : "Excluded from future reports"}
                     </dd>
                   </div>
                 </dl>
               </div>
+
+              <section className="rounded-md border border-line bg-[#fbfaf7] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase text-muted">Decision audit</h3>
+                    <p className="mt-2 text-base font-semibold">
+                      {selectedInsightHasDecision
+                        ? `${decisionLabel(selectedInsight.status)} insight`
+                        : "Draft awaiting decision"}
+                    </p>
+                  </div>
+                  <span
+                    className={`w-fit rounded-md border px-2.5 py-1 text-xs font-semibold ${statusClassName(
+                      selectedInsight.status
+                    )}`}
+                  >
+                    {statusLabel(selectedInsight.status)}
+                  </span>
+                </div>
+
+                <dl className="mt-4 grid gap-3 text-sm md:grid-cols-3">
+                  <div className="rounded-md border border-line bg-white px-3 py-2">
+                    <dt className="font-medium text-muted">Decision time</dt>
+                    <dd className="mt-1 font-semibold">
+                      {selectedInsight.reviewedAt
+                        ? formatDateTime(selectedInsight.reviewedAt)
+                        : "Not reviewed yet"}
+                    </dd>
+                  </div>
+                  <div className="rounded-md border border-line bg-white px-3 py-2">
+                    <dt className="font-medium text-muted">Reviewer</dt>
+                    <dd className="mt-1 font-semibold">
+                      {selectedInsight.reviewedBy ?? "Not recorded"}
+                    </dd>
+                  </div>
+                  <div className="rounded-md border border-line bg-white px-3 py-2">
+                    <dt className="font-medium text-muted">Report eligibility</dt>
+                    <dd className="mt-1 font-semibold">
+                      {selectedInsight.status === "APPROVED"
+                        ? "Approved for future reports"
+                        : "Not available for future reports"}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="mt-4 rounded-md border border-line bg-white px-3 py-3 text-sm">
+                  <p className="font-medium text-muted">Decision note</p>
+                  <p className="mt-2 leading-6 text-ink">
+                    {selectedInsight.reviewNotes?.trim() ||
+                      (selectedInsightHasDecision
+                        ? "No decision note was recorded."
+                        : "A note will be recorded when this draft is approved or rejected.")}
+                  </p>
+                </div>
+              </section>
 
               <section className="border-t border-line pt-5">
                 <div className="flex items-center justify-between gap-4">
@@ -662,36 +779,57 @@ export function InsightReviewWorkspace({
 
               {canManage ? (
                 <section className="mt-6 border-t border-line pt-5">
-                  <label className="grid gap-2 text-sm font-medium text-muted">
-                    Review notes
-                    <textarea
-                      className="min-h-24 rounded-md border border-line bg-snow px-3 py-2 text-sm text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/20"
-                      onChange={(event) => setReviewNotes(event.target.value)}
-                      value={reviewNotes}
-                    />
-                  </label>
-                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                    <button
-                      className="h-10 rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-[#9bb4ad]"
-                      disabled={activeReviewAction !== null || selectedInsight.status === "APPROVED"}
-                      onClick={() => submitReviewAction(selectedInsight.id, "APPROVED")}
-                      type="button"
-                    >
-                      {activeReviewAction === `${selectedInsight.id}:APPROVED`
-                        ? "Approving"
-                        : "Approve"}
-                    </button>
-                    <button
-                      className="h-10 rounded-md border border-negative px-4 text-sm font-semibold text-negative transition hover:bg-[#fff1ef] disabled:cursor-not-allowed disabled:border-[#d8b9b5] disabled:text-[#a9827c]"
-                      disabled={activeReviewAction !== null || selectedInsight.status === "REJECTED"}
-                      onClick={() => submitReviewAction(selectedInsight.id, "REJECTED")}
-                      type="button"
-                    >
-                      {activeReviewAction === `${selectedInsight.id}:REJECTED`
-                        ? "Rejecting"
-                        : "Reject"}
-                    </button>
-                  </div>
+                  {selectedInsightIsDraft ? (
+                    <>
+                      <label className="grid gap-2 text-sm font-medium text-muted">
+                        Decision note
+                        <textarea
+                          className="min-h-24 rounded-md border border-line bg-snow px-3 py-2 text-sm text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/20"
+                          onChange={(event) => setReviewNotes(event.target.value)}
+                          placeholder="Record the reason for the approval or rejection."
+                          value={reviewNotes}
+                        />
+                      </label>
+                      <p className="mt-3 text-sm leading-6 text-muted">
+                        Approving marks this insight for future report use. Draft and rejected
+                        insights stay out of reports.
+                      </p>
+                      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                        <button
+                          className="h-10 rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-[#9bb4ad]"
+                          disabled={activeReviewAction !== null}
+                          onClick={() => submitReviewAction(selectedInsight.id, "APPROVED")}
+                          type="button"
+                        >
+                          {activeReviewAction === `${selectedInsight.id}:APPROVED`
+                            ? "Approving"
+                            : "Approve"}
+                        </button>
+                        <button
+                          className="h-10 rounded-md border border-negative px-4 text-sm font-semibold text-negative transition hover:bg-[#fff1ef] disabled:cursor-not-allowed disabled:border-[#d8b9b5] disabled:text-[#a9827c]"
+                          disabled={activeReviewAction !== null}
+                          onClick={() => submitReviewAction(selectedInsight.id, "REJECTED")}
+                          type="button"
+                        >
+                          {activeReviewAction === `${selectedInsight.id}:REJECTED`
+                            ? "Rejecting"
+                            : "Reject"}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-md border border-line bg-snow px-4 py-3 text-sm leading-6 text-muted">
+                      <p className="font-semibold text-ink">
+                        {selectedInsight.status === "APPROVED"
+                          ? "Approved insight locked"
+                          : "Decision recorded"}
+                      </p>
+                      <p className="mt-1">
+                        Reviewed insights are locked for auditability. Approved insights are the
+                        only insights marked for future report use.
+                      </p>
+                    </div>
+                  )}
                 </section>
               ) : null}
             </article>
