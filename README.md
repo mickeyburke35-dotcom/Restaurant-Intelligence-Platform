@@ -11,7 +11,6 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Restaurant and client management
 - Tenant-scoped review source management
 - Approved review import
-- Read-only review dashboard with search, filters, sorting, pagination, and detail view
 - AI-assisted sentiment analysis
 - Theme extraction
 - Insight generation
@@ -47,7 +46,6 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 ### AI
 
 - OpenAI API
-- Google AI Studio / Gemini for the first review-summary test endpoint
 
 ### Hosting
 
@@ -99,7 +97,13 @@ npm install
 
 All required environment variables are documented in `.env.example`. Keep secrets, API keys, tokens, customer data, and production credentials out of source control.
 
-`GOOGLE_AI_API_KEY` is used server-side by the Gemini review-summary endpoint. Do not prefix it with `NEXT_PUBLIC_`, and do not expose it to browser code.
+For the lead capture API:
+
+- `SUPABASE_URL`: Supabase project URL used by the server route.
+- `SUPABASE_SERVICE_ROLE_KEY`: Server-only key used by `POST /api/demo/leads` to insert into `public.leads`.
+- `ZAPIER_LEAD_WEBHOOK_URL`: Server-only Zapier webhook URL notified after a successful lead insert.
+
+Do not expose `SUPABASE_SERVICE_ROLE_KEY` or `ZAPIER_LEAD_WEBHOOK_URL` to client components or `NEXT_PUBLIC_` variables.
 
 ### Development
 
@@ -141,49 +145,36 @@ npx prisma studio
 
 ---
 
-## Review Dashboard
+## Lead Capture API
 
-The read-only Review Dashboard is available at `/reviews`. It uses the same active agency request context as the API layer and only reads tenant-scoped review data from the existing Prisma models.
+### `POST /api/demo/leads`
 
-The dashboard supports:
+Purpose: captures demo interest and stores the lead in Supabase before notifying Zapier.
 
-- Review list/table
-- Search across review title, text, external ID, restaurant, location, and source name
-- Filters by restaurant, location, source, rating, sentiment, and published date range
-- Sorting by published date, rating, sentiment, restaurant, location, source, and collected date
-- Pagination with configurable page size
-- Review detail view with full review text, source, timestamps, trace fields, rating, sentiment, score, language, themes, and source review link when available
+Input:
 
-This dashboard does not generate AI output, create reports, import reviews, collect new data, or show competitor features.
+```json
+{
+  "email": "name@company.com"
+}
+```
 
----
+Server behavior:
 
-## Review APIs
+- Validates the request body with Zod.
+- Inserts into `public.leads` with `email` and `source = "restaurant_demo"`.
+- After a successful Supabase insert, starts a fire-and-forget server-side POST to `ZAPIER_LEAD_WEBHOOK_URL` with `email`, `source`, and `created_at`.
+- Logs Zapier webhook delivery failures only; Zapier outages do not change the lead capture response.
+- Uses server-only Supabase and Zapier environment variables.
 
-Review endpoints are read-only dashboard endpoints. They do not create, edit, import, enrich, summarize, export, or collect reviews.
+Response:
 
-All routes require an active agency request context. The current route integration expects `x-agency-id` and `x-user-id`, then verifies that the user has an active membership in that agency. Every query is scoped by `agency_id` and excludes soft-deleted reviews.
+- `201`: `{ "ok": true, "message": "Thanks. We will follow up to schedule your demo." }`
+- `400`: invalid JSON or invalid email.
+- `500`: server configuration or unexpected request failure.
+- `502`: Supabase insert failure.
 
-### List Reviews
-
-`GET /api/reviews`
-
-- Purpose: list tenant-scoped reviews for the dashboard with filters, sorting, pagination, summary metrics, and filter options.
-- Query inputs: `search`, `restaurantId` UUID, `locationId` UUID, `reviewSourceId` UUID, `rating` from `1` to `5`, `sentiment`, `dateFrom` and `dateTo` as `YYYY-MM-DD`, `sortBy`, `sortDirection=asc|desc`, `page`, and `pageSize`.
-- Supported `sortBy` values: `publishedAt`, `rating`, `sentiment`, `restaurant`, `location`, `source`, and `collectedAt`.
-- Output: `{ data, pagination, summary, filters }`, where `summary` includes total reviews, average rating, and sentiment counts.
-- Auth: any active agency role with access to the agency context.
-- Errors: `400` for invalid query input, `401` for missing agency or user context, and `403` for invalid membership.
-
-### Get Review Detail
-
-`GET /api/reviews/:reviewId`
-
-- Purpose: fetch one tenant-scoped review for the dashboard detail view.
-- Inputs: route `reviewId` UUID.
-- Output: `{ data: Review }`, including restaurant, location, and review source summaries.
-- Auth: any active agency role with access to the agency context.
-- Errors: `400` for invalid route input, `401` for missing agency or user context, `403` for invalid membership, and `404` when the review is outside the agency or soft-deleted.
+Auth: public demo endpoint. It does not read or modify tenant-scoped restaurant intelligence data.
 
 ---
 
@@ -243,21 +234,6 @@ All routes require an active agency request context. The current route integrati
 - AI insights must remain traceable to source reviews with supporting evidence.
 - Insights should include model, timestamp, confidence, and source references when available.
 - High-impact recommendations and client-facing narratives require human review before presentation as business advice.
-
----
-
-## AI Review Summary Endpoint
-
-`POST /api/ai/review-summary` generates a draft review summary using Google AI Studio / Gemini.
-
-- Purpose: summarize fictional restaurant review text, classify sentiment, and identify key themes for local testing.
-- Request body: `{ "reviewText": "..." }`
-- Response body: `{ "summary": "...", "sentiment": "positive|neutral|negative|mixed|unknown", "keyThemes": ["..."] }`
-- Auth requirements: none yet; this endpoint does not read or write tenant data and must only be used with fictional review text until auth and approved-source flows are added.
-- Error cases: invalid JSON, empty review text, missing `GOOGLE_AI_API_KEY`, Gemini API failure, or invalid AI output shape.
-- Persistence: AI output is validated and returned to the caller, but it is not saved to the database.
-
-Test UI: run `npm run dev` and open `/ai/review-summary`.
 
 ---
 

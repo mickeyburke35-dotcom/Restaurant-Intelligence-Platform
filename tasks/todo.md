@@ -4,20 +4,26 @@
 
 - No active sprint task captured yet.
 
-## AI Review Summary Runtime Fix Plan
+## Zapier Lead Notification Plan
 
-1. Stop any running local Next.js dev server and remove the `.next` cache.
-2. Restart the dev server and re-test `/ai/review-summary` in the browser.
-3. If the runtime invariant remains, inspect the review summary page, client tester, and imports for server/client boundary violations.
-4. Make the smallest needed fix, then run lint, typecheck, build, and confirm a real Gemini response renders.
+1. Add the Session 16 lead capture API route with server-side email validation and the existing Supabase lead insert behavior.
+2. Read `ZAPIER_LEAD_WEBHOOK_URL` from the server environment and fire a non-blocking webhook POST only after Supabase accepts the lead.
+3. Log webhook delivery failures without exposing secrets or changing the lead capture response.
+4. Update `.env.example`, README API notes, and verify lint, typecheck, and build.
 
-## Google AI Review Summary Integration Plan
+## GitHub Push Security Review Workflow Plan
 
-1. Add a server-only `POST /api/ai/review-summary` route that reads `GOOGLE_AI_API_KEY`, validates review text, calls Gemini, validates structured AI output, and returns user-safe errors.
-2. Add a small test UI page for fictional restaurant review text, with client-side output validation before rendering the result.
-3. Show the generated summary, sentiment, key themes, and a human-review note without saving AI output to the database.
-4. Update `.env.example`, `README.md`, and this todo file; do not modify Prisma schema.
-5. Run `npm run lint`, `npm run typecheck`, and `npm run build`.
+1. Add the post-push security-audit rule to `AGENTS.md` under Workflow.
+2. Add the same workflow rule and checklist to the README development workflow because it documents workflow rules.
+3. Keep the change documentation-only: no application code, dependencies, destructive commands, or unrelated edits.
+4. Re-read the changed sections and record completion notes.
+
+## Review Sources Implementation Plan
+
+1. Add tenant-scoped review source service functions for list, create, edit, and soft archive/disconnect using the existing Prisma `ReviewSource` model.
+2. Add Zod-validated Next.js API routes for restaurant-scoped list/create and source-scoped edit/archive actions.
+3. Keep behavior limited to source configuration records: no scraping, external provider calls, review import, dashboards, or AI insight storage.
+4. Update README API documentation and record completion notes after lint, typecheck, and build verification.
 
 ## Prisma Initial Migration Plan
 
@@ -94,8 +100,9 @@
 
 ## Completed
 
-- 2026-07-01: Cleared the Next.js cache, restarted the dev server, confirmed `/ai/review-summary` renders without the `clientReferenceManifest` invariant, verified the client/server boundary did not require code changes, confirmed a real Gemini review summary renders in browser, and passed `npm run lint`, `npm run typecheck`, and `npm run build`.
-- 2026-07-01: Implemented the first secure Google AI Studio / Gemini integration with `POST /api/ai/review-summary`, server-only `GOOGLE_AI_API_KEY` usage, request and output validation, a fictional-review test UI at `/ai/review-summary`, human-review note, README and `.env.example` updates, no Prisma schema changes, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-07-02: Applied the lead notification webhook to the current branch with `POST /api/demo/leads`, server-side Supabase lead insertion, `ZAPIER_LEAD_WEBHOOK_URL` configuration, and fire-and-forget Zapier delivery containing `email`, `source`, and `created_at`; webhook failures are logged without failing lead capture. Updated README and `.env.example`; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-07-01: Added the post-GitHub-push security-audit workflow rule and checklist to `AGENTS.md` and `README.md`, including required pass/fail reporting, files checked, findings, remediation guidance, secret search terms, `.env` checks, screenshot checks, Popstop/Videoreport artifact checks, and intended-file confirmation. No application code or dependencies were changed.
+- 2026-07-01: Implemented Review Sources only: tenant-scoped list/create/edit/soft archive API routes and service layer using the existing Prisma schema, Zod validation, restaurant/location ownership checks, and no scraping, external API calls, review import, dashboards, or AI insight storage. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
 - 2026-06-29: Created the initial Next.js App Router foundation with TypeScript, Tailwind CSS, Prisma/PostgreSQL schema configuration, Zod dependency, ESLint flat config, environment example, requested project directories, and a minimal buildable app shell; verified `npm run prisma:generate`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 - 2026-06-29: Created the Session 12 canonical repository structure with `ARCHITECTURE.md`, `SUBMISSION.md`, `src/.gitkeep`, `public/.gitkeep`, and `evidence/.gitkeep`; recorded the GitHub suspension submission status and verified no unrelated files were modified.
