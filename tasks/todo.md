@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## Reports Implementation Plan
+
+1. Add a tenant-scoped report service using the existing Prisma `Report` model, selecting only approved insights for the chosen restaurant, optional location, and review publication date range.
+2. Add a Zod-validated report creation API route that stores approved insight summaries, source counts, filters, and supporting source metadata in the report JSON sections without adding PDF export or competitor data.
+3. Add `/reports` and `/reports/[reportId]` pages with restaurant, location, and date range controls, a report list, creation flow, and read-only detail view.
+4. Update README documentation and verify `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## Human Approval Workflow Polish Plan
 
 1. Improve the `/insights` review UI with clearer Draft, Approved, and Rejected status badges, approval/rejection timestamps, reviewer display, and report-eligibility guidance.
@@ -115,6 +122,7 @@
 
 ## Completed
 
+- 2026-07-02: Implemented Reports only: added a tenant-scoped report service and `POST /api/reports`, created stored report snapshots from `APPROVED` insights only, enforced restaurant/location/date-range scope across linked source reviews, stored filters and approved insight summaries/source counts in the existing Prisma `Report` model without a schema migration, added `/reports` and `/reports/[reportId]`, and updated README. Verified `npm run lint`, `npm run typecheck`, `npm run build`, `npm test` placeholder output, and local route smoke checks for `/reports` and `/reports/not-a-uuid`.
 - 2026-07-02: Polished the Human Approval Workflow only: improved `/insights` status badges for Draft, Approved, and Rejected states; added decision timestamp, reviewer, audit note, and future-report eligibility display; locked reviewed insights from follow-up approval edits in the UI and API without changing Prisma schema; updated README. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-02: Implemented AI Insight Generation only: added Gemini-backed draft insight generation from selected tenant-scoped imported reviews, stored `Insight` records as `DRAFT` with model, prompt version, timestamp, confidence, source review count, and `InsightSourceReview` evidence links; added human approval/rejection API flow and `/insights` review page with supporting excerpts. Updated README; verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-02: Applied the lead notification webhook to the current branch with `POST /api/demo/leads`, server-side Supabase lead insertion, `ZAPIER_LEAD_WEBHOOK_URL` configuration, and fire-and-forget Zapier delivery containing `email`, `source`, and `created_at`; webhook failures are logged without failing lead capture. Updated README and `.env.example`; verified `npm run lint`, `npm run typecheck`, and `npm run build`.

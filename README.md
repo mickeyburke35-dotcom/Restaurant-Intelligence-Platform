@@ -16,7 +16,8 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Insight generation
 - Competitor signal tracking
 - Dashboard analytics
-- PDF/CSV report export
+- Approved insight report snapshots
+- PDF/CSV report export planning
 
 ---
 
@@ -253,7 +254,7 @@ AI insight generation uses the existing server-side Google Gemini integration. I
 - Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
 - Approval behavior: only `DRAFT` insights can be approved or rejected. Approved and rejected insights are locked for auditability, and approval requires at least one linked source review.
 - Audit behavior: approval and rejection store the reviewer, decision timestamp, status, and optional decision note on the insight record.
-- Report behavior: only `APPROVED` insights are marked as eligible for future report workflows. Reports are not implemented in this slice.
+- Report behavior: only `APPROVED` insights are eligible for report snapshots. Draft and rejected insights are excluded from report creation.
 - Errors: `400` for invalid input, missing source evidence, or attempts to edit a reviewed insight, `401` for missing context, `403` for read-only roles, and `404` when the insight is outside the active agency.
 
 ### AI Insight Review Page
@@ -264,6 +265,42 @@ AI insight generation uses the existing server-side Google Gemini integration. I
 - Users with insight permissions can select approved imported reviews and generate new draft insights from that selected evidence.
 - The page displays clear Draft, Approved, and Rejected badges, reviewer details when available, decision timestamps, decision notes, and future report eligibility.
 - Viewer users can inspect permitted insight evidence but cannot generate, approve, or reject insights.
+
+---
+
+## Reports APIs
+
+Reports use the existing Prisma `Report` model and store an HTML-ready snapshot in `sections` with the selected filters in `filters`. This slice does not generate PDF or CSV files.
+
+### Create Approved Insight Report
+
+`POST /api/reports`
+
+- Purpose: create a tenant-scoped report snapshot from approved insights only.
+- JSON inputs: `restaurantId`, optional `locationId`, `dateRangeStart`, and `dateRangeEnd` in `YYYY-MM-DD` format.
+- Output: `{ data: Report }` with `status = "READY"`, `approvedOnly = true`, selected restaurant/location/date filters, approved insight summaries, source review counts, and supporting source metadata.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: the selected restaurant and optional location must belong to the active agency, and restaurant-scoped memberships can create reports only for their assigned restaurant.
+- Insight behavior: only `APPROVED` insights are selected. Draft, rejected, archived, and deleted insights are excluded.
+- Evidence behavior: every linked source review for an included insight must match the selected restaurant, optional location, and review publication date range.
+- Export behavior: no PDF or CSV file is generated; `fileUrl` and `storageKey` remain empty.
+- Errors: `400` for invalid inputs, invalid date order, location mismatch, or no approved insights matching the filters; `401` for missing context; `403` for read-only roles or out-of-scope restaurant access; `404` when the restaurant is outside the active agency.
+
+### Reports Page
+
+`GET /reports`
+
+- Purpose: select a restaurant, optional location, and date range, then create a stored report from approved insight summaries and source counts.
+- The page lists recent stored reports with status, selected scope, date range, approved insight count, and source review count.
+- Viewer users can inspect stored reports but cannot create new reports.
+
+### Report Detail Page
+
+`GET /reports/:reportId`
+
+- Purpose: show one stored report snapshot with selected filters, overview counts, approved insight summaries, and linked source review evidence.
+- Tenant behavior: the report must belong to the active agency, and restaurant-scoped memberships can open only reports for their assigned restaurant.
+- Draft and rejected insights are not shown in report details because they are excluded at report creation.
 
 ---
 
