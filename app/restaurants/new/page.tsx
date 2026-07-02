@@ -30,7 +30,7 @@ export default async function NewRestaurantPage() {
         action={createRestaurantAction}
         submitLabel="Create restaurant"
         title="Create restaurant"
-        description={`Add a restaurant client inside ${context.agencyName}. Locations and review sources are managed in later setup steps.`}
+        description={`Add a restaurant client inside ${context.agencyName}. Locations can be added after the restaurant profile is created.`}
       />
     </main>
   );
