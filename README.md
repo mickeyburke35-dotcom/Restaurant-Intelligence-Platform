@@ -9,8 +9,9 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Multi-tenant agency workspaces
 - Role-based access control
 - Restaurant and client management
-- Restaurant location management
+- Tenant-scoped review source management
 - Approved review import
+- Read-only review dashboard with search, filters, sorting, pagination, and detail view
 - AI-assisted sentiment analysis
 - Theme extraction
 - Insight generation
@@ -137,81 +138,97 @@ npx prisma studio
 
 ---
 
-## Restaurant API Routes
+## Review Dashboard
 
-Restaurant CRUD is implemented with agency-scoped Next.js route handlers:
+The read-only Review Dashboard is available at `/reviews`. It uses the same active agency request context as the API layer and only reads tenant-scoped review data from the existing Prisma models.
 
-- `GET /api/restaurants`: lists restaurants for the signed-in user agency. Query parameters: `q` and `status` (`ALL`, `ACTIVE`, `PAUSED`, or `ARCHIVED`).
-- `POST /api/restaurants`: creates one restaurant. Body fields: `name`, `segment`, `cuisine`, `websiteUrl`, `notes`, and `status`.
-- `GET /api/restaurants/:id`: returns one non-archived restaurant only when it belongs to the active agency.
-- `PATCH /api/restaurants/:id`: updates one non-archived restaurant with the same fields used by create.
-- `DELETE /api/restaurants/:id`: archives one restaurant by setting `status` to `ARCHIVED` and `deletedAt` to the current timestamp.
+The dashboard supports:
 
-All routes resolve an active agency membership before accessing restaurant data, validate input with Zod, and return user-safe `400`, `401`, `403`, `404`, `409`, or `500` errors. Local development may use `RESTAURANT_INTELLIGENCE_USER_EMAIL` or `RESTAURANT_INTELLIGENCE_USER_ID` to select a seeded user; non-production requests without an identity fall back to the first active manager-level membership.
+- Review list/table
+- Search across review title, text, external ID, restaurant, location, and source name
+- Filters by restaurant, location, source, rating, sentiment, and published date range
+- Sorting by published date, rating, sentiment, restaurant, location, source, and collected date
+- Pagination with configurable page size
+- Review detail view with full review text, source, timestamps, trace fields, rating, sentiment, score, language, themes, and source review link when available
 
----
-
-## Location API Routes
-
-Location CRUD is implemented as restaurant-scoped Next.js route handlers:
-
-- `GET /api/restaurants/:id/locations`: lists locations for one restaurant in the signed-in user agency. Query parameters: `q` and `status` (`ALL`, `ACTIVE`, `PAUSED`, `CLOSED`, or `ARCHIVED`).
-- `POST /api/restaurants/:id/locations`: creates one location under the restaurant. Body fields: `name`, `addressLine1`, `addressLine2`, `city`, `region`, `postalCode`, `country`, `timezone`, `latitude`, `longitude`, and `status`.
-- `GET /api/restaurants/:id/locations/:locationId`: returns one non-archived location only when it belongs to the active agency and restaurant.
-- `PATCH /api/restaurants/:id/locations/:locationId`: updates one non-archived location with the same fields used by create.
-- `DELETE /api/restaurants/:id/locations/:locationId`: archives one location by setting `status` to `ARCHIVED` and `deletedAt` to the current timestamp.
-
-All location routes reuse the active agency membership and role checks from restaurant management. Every query is scoped by `agency_id` and `restaurant_id`, and manager-only mutations use the existing restaurant permission rules. Location inputs are validated with Zod and use the shared API error response helper.
+This dashboard does not generate AI output, create reports, import reviews, collect new data, or show competitor features.
 
 ---
 
-## Review Import APIs
+## Review APIs
 
-Review import endpoints parse CSV uploads, validate review rows, preview ready and rejected rows, and store approved public reviews in the existing `reviews` table. They do not call external providers, scrape websites, generate AI output, or create dashboards.
+Review endpoints are read-only dashboard endpoints. They do not create, edit, import, enrich, summarize, export, or collect reviews.
 
-All import routes require `x-agency-id` and `x-user-id`. The user must have an active Owner, Admin, Manager, or Analyst membership in the agency. The selected restaurant, location, and review source must belong to that agency, and the review source must have `approvalStatus: APPROVED`.
+All routes require an active agency request context. The current route integration expects `x-agency-id` and `x-user-id`, then verifies that the user has an active membership in that agency. Every query is scoped by `agency_id` and excludes soft-deleted reviews.
 
-### CSV Columns
+### List Reviews
 
-Required columns:
+`GET /api/reviews`
 
-- `external_review_id`: provider/export review identifier used for duplicate prevention.
-- `published_at`: public review publication date.
+- Purpose: list tenant-scoped reviews for the dashboard with filters, sorting, pagination, summary metrics, and filter options.
+- Query inputs: `search`, `restaurantId` UUID, `locationId` UUID, `reviewSourceId` UUID, `rating` from `1` to `5`, `sentiment`, `dateFrom` and `dateTo` as `YYYY-MM-DD`, `sortBy`, `sortDirection=asc|desc`, `page`, and `pageSize`.
+- Supported `sortBy` values: `publishedAt`, `rating`, `sentiment`, `restaurant`, `location`, `source`, and `collectedAt`.
+- Output: `{ data, pagination, summary, filters }`, where `summary` includes total reviews, average rating, and sentiment counts.
+- Auth: any active agency role with access to the agency context.
+- Errors: `400` for invalid query input, `401` for missing agency or user context, and `403` for invalid membership.
 
-Optional columns:
+### Get Review Detail
 
-- `rating`: numeric rating from 1 to 5.
-- `title`
-- `text`
-- `language`
-- `author_display_name_hash`: hashed display name only; raw names and contact fields are rejected.
-- `review_url`
-- `approved_public`: when present, must be true.
+`GET /api/reviews/:reviewId`
 
-Supported aliases include `external_id`, `review_id`, `provider_review_id`, `review_date`, `published_date`, `review_text`, `url`, and `source_url`. Unsupported columns and private/contact columns such as author name, email, phone, customer ID, or customer name are rejected.
+- Purpose: fetch one tenant-scoped review for the dashboard detail view.
+- Inputs: route `reviewId` UUID.
+- Output: `{ data: Review }`, including restaurant, location, and review source summaries.
+- Auth: any active agency role with access to the agency context.
+- Errors: `400` for invalid route input, `401` for missing agency or user context, `403` for invalid membership, and `404` when the review is outside the agency or soft-deleted.
 
-### Preview Review Import
+---
 
-`POST /api/reviews/import/preview`
+## Review Source APIs
 
-- Purpose: parse CSV text and return row-level import readiness before storing reviews.
-- JSON inputs: `restaurantId`, `locationId`, `reviewSourceId`, `csvText`, and `approvedPublicData: true`.
-- Output: `{ data: { summary, fileErrors, rows } }`, where rows are marked `READY` or `REJECTED` with reasons.
-- Duplicate handling: rows are rejected when their external review ID repeats in the CSV or already exists for the same agency and review source.
-- Auth: Owner, Admin, Manager, or Analyst.
-- Errors: `400` for invalid request input, unapproved source, location/source mismatch, malformed request JSON, or invalid IDs; `401` for missing request context; `403` for invalid membership or read-only role; `404` when the restaurant or review source is outside the agency.
+Review source endpoints manage source configuration records only. They do not scrape, call provider APIs, import reviews, create dashboards, or store AI insights.
 
-### Confirm Review Import
+All routes require an active agency request context. The current route integration expects `x-agency-id` and `x-user-id`, then verifies that the user has an active membership in that agency. `VIEWER` users can read sources but cannot create, edit, or archive them.
 
-`POST /api/reviews/import/confirm`
+### List Review Sources
 
-- Purpose: rerun the same validation and insert only rows that are still ready.
-- JSON inputs: same as preview.
-- Output: `{ data: { importedCount, preview } }`.
-- Storage: creates tenant-scoped `Review` records linked to `agencyId`, `restaurantId`, `locationId`, and `reviewSourceId`; stores source payload hashes and CSV import metadata.
-- Duplicate handling: uses external review ID plus review source within the agency; database inserts use duplicate skipping as an additional guard.
-- Auth: Owner, Admin, Manager, or Analyst.
-- Errors: same as preview.
+`GET /api/restaurants/:restaurantId/review-sources`
+
+- Purpose: list review sources for one restaurant, optionally narrowed to one location.
+- Query inputs: `locationId` UUID, `includeArchived=true|false`.
+- Output: `{ data: ReviewSource[] }`, including the optional location summary.
+- Auth: any active agency role with access to the agency context.
+- Errors: `400` for invalid route or query input, `401` for missing agency or user context, `403` for invalid membership, `404` when the restaurant is outside the agency.
+
+### Create Review Source
+
+`POST /api/restaurants/:restaurantId/review-sources`
+
+- Purpose: create a source assigned to the restaurant and optionally one of its locations.
+- JSON inputs: `name`, `sourceType`, optional `locationId`, `approvalStatus`, `connectionStatus`, `externalAccountId`, `externalLocationId`, and `permissionNotes`.
+- Output: `{ data: ReviewSource }`.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid input or a location outside the restaurant, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the restaurant is outside the agency, `409` for duplicate provider identifiers.
+
+### Edit Review Source
+
+`PATCH /api/review-sources/:reviewSourceId`
+
+- Purpose: update source metadata, status, provider identifiers, permission notes, or connect/disconnect it from a location by setting `locationId`.
+- JSON inputs: any create field as a partial payload. Use `locationId: null` to remove the location link while keeping the restaurant assignment.
+- Output: `{ data: ReviewSource }`.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid input or a location outside the source restaurant, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the source is outside the agency, `409` for duplicate provider identifiers.
+
+### Archive Review Source
+
+`DELETE /api/review-sources/:reviewSourceId`
+
+- Purpose: soft archive a source and mark it `DISCONNECTED`; the database row remains for auditability.
+- Inputs: route `reviewSourceId` UUID.
+- Output: `{ data: ReviewSource }` with `deletedAt` set.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid route input, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the source is outside the agency or already archived.
 
 ---
 
@@ -245,6 +262,17 @@ During development:
 - Do not make authentication or tenant logic changes without approval.
 - Do not add dependencies without approval.
 - Do not change data collection rules or AI insight behavior without approval.
+
+After every push to GitHub, spawn or run a security-audit subagent before opening or merging a PR. The audit must check the pushed diff for private information, secrets, API keys, database URLs, service-role keys, tokens, personal data, accidental .env commits, generated files, and unrelated coursework artifacts. The audit must report pass/fail, list files checked, list any findings, and recommend immediate remediation before merge.
+
+Post-push security audit checklist:
+
+- Check git diff against origin branch.
+- Search for common secrets: `GOOGLE_AI_API_KEY`, `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `AUTH_SESSION_SECRET`, `github_pat_`, `sk-`, and `AIza`.
+- Confirm `.env` is ignored.
+- Confirm no screenshots expose secrets.
+- Confirm no unrelated Popstop/Videoreport files are committed to the Restaurant Intelligence repo.
+- Confirm only intended files changed.
 
 ---
 

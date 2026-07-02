@@ -2,15 +2,29 @@
 
 ## Current Work
 
-- No active sprint task captured yet.
+Session 18 deliverables are complete; see the completion note below.
 
-## Review Import Implementation Plan
+## Session 18 Deliverables Plan
 
-1. Add a no-dependency CSV parser and Zod row validation for approved public review imports.
-2. Add tenant-scoped preview and confirmation services that verify restaurant, location, and approved review source ownership before reading or writing reviews.
-3. Add API routes for review import preview and confirmation, reusing the existing agency request context and editor-role checks.
-4. Add an import page that uploads CSV text, previews ready/rejected rows, requires approved-public-data confirmation, and submits the import.
-5. Update README API documentation, record completion notes, and verify with lint, typecheck, and build.
+1. Create the loop one-pager for the imported reviews to AI draft insight to verifier to human approval workflow, naming the Anthropic evaluator-optimizer pattern and clear stop conditions.
+2. Create the mini-project walkthrough tying the course pieces to the Restaurant Intelligence Platform only.
+3. Convert the existing post-push security audit workflow into a reusable skill.md-style evidence artifact.
+4. Create an honest Devil's Advocate red-team log covering business, user, architecture, AI, data, adoption, privacy, and demo credibility risks.
+5. Run available markdown or formatting checks only, then record files created and completion notes.
+
+## Session 18 Files Created
+
+- `evidence/session-18-loop-one-pager.md`
+- `evidence/session-18-mini-project-walkthrough.md`
+- `evidence/session-18-artifact-to-skill.md`
+- `evidence/session-18-red-team-log.md`
+
+## Review Dashboard Implementation Plan
+
+1. Add tenant-scoped review service functions for list, filter, sort, paginate, filter metadata, and detail reads using the existing Prisma `Review` model and request context pattern.
+2. Add Zod-validated read-only API routes for `GET /api/reviews` and `GET /api/reviews/:reviewId`, with no AI generation, reports, imports, or competitor behavior.
+3. Build a responsive review dashboard page with search, restaurant/location/source/rating/sentiment/date filters, sortable review table, pagination, and review detail view.
+4. Update README API/UI documentation and record completion notes after lint, typecheck, and build verification.
 
 ## GitHub Push Security Review Workflow Plan
 
@@ -101,7 +115,8 @@
 
 ## Completed
 
-- 2026-07-01: Implemented Review Import only: no-dependency CSV parser, Zod row validation, preview and confirmation APIs, duplicate rejection by external review ID per agency/source, approved-source and approved-public-data gates, Prisma review storage linked to agency, restaurant, location, and review source, import audit logging, and a `/reviews/import` page. Updated README API documentation. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-07-02: Created Session 18 evidence deliverables: loop one-pager for imported reviews to AI draft insight to verifier to human approval, mini-project walkthrough aligned to the Restaurant Intelligence Platform, post-push security audit skill-style artifact, and Devil's Advocate red-team log. Updated this todo file with the plan, files created, and completion note. Ran `git diff --check` on the touched markdown files only; no application code, dependencies, Prisma schema, build, typecheck, or application lint changes were made.
+- 2026-07-02: Implemented Review Dashboard only: tenant-scoped read-only review list/detail service functions, `GET /api/reviews`, `GET /api/reviews/:reviewId`, server-rendered `/reviews` dashboard with search, restaurant/location/source/rating/sentiment/date filters, sorting, pagination, summary cards, and review detail view. No AI generation, reports, import behavior, or competitor features were added. Updated README documentation and verified `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` (no tests configured yet).
 - 2026-07-01: Added the post-GitHub-push security-audit workflow rule and checklist to `AGENTS.md` and `README.md`, including required pass/fail reporting, files checked, findings, remediation guidance, secret search terms, `.env` checks, screenshot checks, Popstop/Videoreport artifact checks, and intended-file confirmation. No application code or dependencies were changed.
 - 2026-07-01: Implemented Review Sources only: tenant-scoped list/create/edit/soft archive API routes and service layer using the existing Prisma schema, Zod validation, restaurant/location ownership checks, and no scraping, external API calls, review import, dashboards, or AI insight storage. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-06-29: Implemented the complete Prisma data model for the Restaurant Intelligence Platform with agency-scoped UUID models, role enums, review/source/insight traceability, human approval workflow fields, competitor observations, reports, scheduled jobs, audit logs, soft-delete fields where useful, indexes, and validated schema formatting without writing migrations.
