@@ -17,6 +17,7 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Competitor signal tracking
 - Dashboard analytics
 - Approved insight report snapshots
+- Live demo hub for existing product routes
 - PDF/CSV report export planning
 
 ---
@@ -112,6 +113,10 @@ Do not expose `SUPABASE_SERVICE_ROLE_KEY`, `ZAPIER_LEAD_WEBHOOK_URL`, or `GOOGLE
 ```bash
 npm run dev
 ```
+
+### Demo Hub
+
+Open `/demo` for a single live-demonstration landing page. It links to the existing restaurant management, restaurant-scoped locations, reviews, AI insights, reports, and sign-in routes without adding business logic.
 
 ### Build
 

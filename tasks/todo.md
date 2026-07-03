@@ -4,6 +4,12 @@
 
 - No active sprint task captured yet.
 
+## Demo Hub Page Plan
+
+1. Add `app/demo/page.tsx` as a static navigation hub using existing Tailwind theme tokens and no business logic.
+2. Include the requested title, subtitle, six demo cards, short descriptions, and `Open` buttons to existing routes.
+3. Document `/demo` in `README.md`, then verify with `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## AI Insight Generation Resilience Plan
 
 1. Inspect the Gemini helper and insight generation model metadata flow without changing tenant checks or Prisma schema.
@@ -136,6 +142,7 @@
 
 ## Completed
 
+- 2026-07-03: Implemented the Demo Hub page only at `/demo` with six static navigation cards for Restaurants, Locations, Reviews, AI Insights, Reports, and Authentication. Used existing Tailwind theme tokens, linked only to existing routes, added no business logic or dependencies, updated README documentation, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-03: Created Session 19 / Deliverable 3 documentation only: demo script, action plan, workflow diagram, agent design, data flow, memory/logging, and risk controls under `evidence/`. Updated this completion note only; no application code, dependencies, schema, auth, tenant logic, data collection behavior, or AI insight behavior was changed.
 - 2026-07-02: Fixed AI insight generation resilience only: kept `gemini-3.5-flash` as the primary configured model, added one retry with stable fallback `gemini-3.1-flash-lite` for transient 5xx/high-demand responses, stored the successful model on draft insights, preserved tenant-scoped review validation and existing friendly `502` UI error behavior, and updated README. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-02: Fixed the AI Insight Generation Prisma insert bug without changing the schema or Gemini logic by switching the draft insight create path from scalar relation IDs to Prisma relation connects for agency, restaurant, location, creator, and source-review evidence. Tenant-scoped review validation remains before insert. Verified `npm run lint`, `npm run typecheck`, `npm run build`, and a rollback-only Prisma runtime create probe.
