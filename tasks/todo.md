@@ -4,6 +4,18 @@
 
 - No active sprint task captured yet.
 
+## Demo Sign-In Flow Navigation Plan
+
+1. Reuse the existing middleware protection pattern so `/demo` redirects unauthenticated visitors to `/sign-in?next=/demo`.
+2. Add a clear signed-in workspace call-to-action to continue to `/demo`, plus a subtle sign-in page `Demo Hub` link.
+3. Preserve existing Demo Hub return links on `/restaurants`, `/reviews`, `/insights`, and `/reports`; update README and verify `npm run lint`, `npm run typecheck`, and `npm run build`.
+
+## Demo Hub Navigation Plan
+
+1. Add a reusable `← Demo Hub` link component using existing border, panel, pine, and focus-ring styling.
+2. Place the link at the upper-left of `/restaurants`, `/reviews`, `/insights`, and `/reports` page shells without changing data fetching, forms, API calls, or permissions.
+3. Update README documentation and verify `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## Demo Hub Page Plan
 
 1. Add `app/demo/page.tsx` as a static navigation hub using existing Tailwind theme tokens and no business logic.
@@ -142,6 +154,9 @@
 
 ## Completed
 
+- 2026-07-03: Created Session 20 Hugging Face scan deliverables only: `evidence/session-20-reflection.md`, `evidence/session-20-huggingface-scan.md`, and `evidence/session-20-strategic-note.md`. Documented the provided model, dataset, Space, fit, and limitations as research references only; none are currently implemented in the app. No application code, dependencies, Prisma schema, data collection rules, AI behavior, customer data, traction claims, or performance claims were changed or added.
+- 2026-07-03: Improved the sign-in-to-demo navigation flow only: `/demo` now uses the existing protected-route middleware redirect to `/sign-in?next=/demo`; `/workspace` has a clear `Continue to Demo Hub` button; `/sign-in` has a subtle Demo Hub link for recording; existing `← Demo Hub` links remain on Restaurants, Reviews, AI Insights, and Reports. No business logic, dependencies, Prisma schema, AI behavior, data collection behavior, or auth implementation logic changed. Updated README and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
+- 2026-07-03: Implemented Demo Hub navigation only by adding a shared `← Demo Hub` link to the upper-left header area of `/restaurants`, `/reviews`, `/insights`, and `/reports`, including page fallback states where present. No business logic, dependencies, schema, auth, tenant logic, data collection behavior, or AI behavior changed. Updated README and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-03: Implemented the Demo Hub page only at `/demo` with six static navigation cards for Restaurants, Locations, Reviews, AI Insights, Reports, and Authentication. Used existing Tailwind theme tokens, linked only to existing routes, added no business logic or dependencies, updated README documentation, and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-03: Created Session 19 / Deliverable 3 documentation only: demo script, action plan, workflow diagram, agent design, data flow, memory/logging, and risk controls under `evidence/`. Updated this completion note only; no application code, dependencies, schema, auth, tenant logic, data collection behavior, or AI insight behavior was changed.
 - 2026-07-02: Fixed AI insight generation resilience only: kept `gemini-3.5-flash` as the primary configured model, added one retry with stable fallback `gemini-3.1-flash-lite` for transient 5xx/high-demand responses, stored the successful model on draft insights, preserved tenant-scoped review validation and existing friendly `502` UI error behavior, and updated README. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
