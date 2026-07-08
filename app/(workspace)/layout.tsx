@@ -16,7 +16,7 @@ export default async function WorkspaceLayout({
           <div className="flex items-center justify-between gap-4 lg:block">
             <div>
               <p className="text-sm font-semibold">Restaurant Intelligence</p>
-              <p className="mt-1 text-xs text-[#C8D1CF]">Authentication</p>
+              <p className="mt-1 text-xs text-[#C8D1CF]">Agency context</p>
             </div>
             <div className="rounded-md border border-[#5D6D72] px-3 py-2 text-xs font-medium lg:mt-8">
               Workspace

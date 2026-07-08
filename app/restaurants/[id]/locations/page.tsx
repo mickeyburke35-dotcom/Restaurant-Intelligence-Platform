@@ -2,6 +2,7 @@ import { LocationStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { archiveLocationAction } from "@/app/restaurants/actions";
+import { DemoHubLink } from "@/components/demo-hub-link";
 import { locationListFilterSchema } from "@/lib/location-validation";
 import { listTenantLocations, type LocationRecord } from "@/lib/locations";
 import {
@@ -259,14 +260,11 @@ function LocationPageShell({
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-8 sm:px-8">
+        <DemoHubLink />
+
         <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <Link
-              href="/restaurants"
-              className="text-sm font-medium text-pine transition hover:text-pine-dark"
-            >
-              Back to restaurants
-            </Link>
+            <p className="text-sm font-medium text-pine">{context.agencyName}</p>
             <h1 className="mt-3 text-2xl font-semibold text-ink">
               {restaurant.name} locations
             </h1>
@@ -275,14 +273,22 @@ function LocationPageShell({
               Reviews, dashboards, AI storage, and reports are not part of this step.
             </p>
           </div>
-          {canManage ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
-              href={`/restaurants/${restaurant.id}/locations/new`}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
+              href="/restaurants"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-line bg-panel px-4 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
             >
-              Create location
+              Back to restaurants
             </Link>
-          ) : null}
+            {canManage ? (
+              <Link
+                href={`/restaurants/${restaurant.id}/locations/new`}
+                className="inline-flex h-10 items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
+              >
+                Create location
+              </Link>
+            ) : null}
+          </div>
         </header>
 
         <SearchAndFilter q={filters.q} status={filters.status} />
