@@ -4,6 +4,21 @@
 
 - No active sprint task captured yet.
 
+## Prisma Data Model Implementation Plan
+
+1. Re-check the requested docs and existing schema against the required models, tenant isolation, AI traceability, and human approval workflow.
+2. Tighten `prisma/schema.prisma` with focused schema-only changes: draft-first insights, agency-scoped evidence uniqueness, and consistent tenant-scoped composite identifiers for business records.
+3. Validate the Prisma schema without writing migrations or changing API/UI files.
+4. Record completion notes in this todo file after validation.
+
+## MVP Polish Plan
+
+1. Improve the Demo Hub as a clearer live-demo navigation surface that links only to existing routes and keeps `/demo` focused on product walkthrough flow.
+2. Add lightweight route loading skeletons and refine existing button loading copy for Reviews, AI Insights, and Reports without changing API or AI behavior.
+3. Strengthen empty and error states with specific next actions, safer reset/back links, and clearer tenant/data context.
+4. Improve report detail and AI insight review readability with better hierarchy, evidence framing, decision status language, and mobile-friendly stacking.
+5. Update README documentation and verify `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## Demo Sign-In Flow Navigation Plan
 
 1. Reuse the existing middleware protection pattern so `/demo` redirects unauthenticated visitors to `/sign-in?next=/demo`.
@@ -154,6 +169,8 @@
 
 ## Completed
 
+- 2026-07-08: Refined the complete Prisma data model in `prisma/schema.prisma` only: defaulted AI insights to `DRAFT`, added agency-scoped uniqueness for insight source-review evidence, and added consistent tenant-scoped composite identifiers/indexing for competitor observations, reports, scheduled jobs, and audit logs. No API routes, UI files, dependencies, or migrations were changed. Verified `npx prisma validate --schema prisma/schema.prisma`.
+- 2026-07-08: Polished the current MVP only: improved Demo Hub navigation, added route loading skeletons for Reviews, AI Insights, Reports, and report detail, clarified empty and error states, improved report detail hierarchy/readability, sharpened AI insight review decision clarity, and tightened mobile stacking for detail panels and empty-state actions. No major features, dependencies, Prisma schema, AI behavior, tenant logic, data collection behavior, or API behavior changed. Updated README and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Created Session 25-26 Governance, Security & IP deliverables only: `docs/governance.md`, `evidence/session-25-skill-risk-audit.md`, and `evidence/session-25-promise-to-proof.md`. `PROJECT_HANDOFF.md` was not present in the workspace, so current-app claims were grounded in the available requested docs and source files. No application code, dependencies, Prisma schema, data collection rules, AI behavior, customer data, production readiness claims, or unrelated project content were changed or added.
 - 2026-07-03: Created Session 20 Hugging Face scan deliverables only: `evidence/session-20-reflection.md`, `evidence/session-20-huggingface-scan.md`, and `evidence/session-20-strategic-note.md`. Documented the provided model, dataset, Space, fit, and limitations as research references only; none are currently implemented in the app. No application code, dependencies, Prisma schema, data collection rules, AI behavior, customer data, traction claims, or performance claims were changed or added.
 - 2026-07-03: Improved the sign-in-to-demo navigation flow only: `/demo` now uses the existing protected-route middleware redirect to `/sign-in?next=/demo`; `/workspace` has a clear `Continue to Demo Hub` button; `/sign-in` has a subtle Demo Hub link for recording; existing `← Demo Hub` links remain on Restaurants, Reviews, AI Insights, and Reports. No business logic, dependencies, Prisma schema, AI behavior, data collection behavior, or auth implementation logic changed. Updated README and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
