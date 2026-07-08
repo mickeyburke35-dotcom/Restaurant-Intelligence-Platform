@@ -13,8 +13,11 @@ const eslintConfig = [
   {
     ignores: [
       ".next/**",
+      "dist/**",
       "node_modules/**",
+      "dist/**",
       "coverage/**",
+      "dist/**",
       "next-env.d.ts"
     ]
   },
