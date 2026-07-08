@@ -233,6 +233,45 @@ All routes require an active agency request context. The current route integrati
 
 ---
 
+## Review Import APIs
+
+Review import is CSV-only. It accepts approved public review data, validates each row against the active agency context, and keeps AI insight generation separate.
+
+CSV columns:
+
+```text
+restaurantId,locationId,reviewSourceId,externalReviewId,rating,reviewText,reviewedAt,sourceUrl
+```
+
+`sourceUrl` is optional. All other columns are required. The selected restaurant, location, and review source are read from each row, not from route parameters.
+
+### Preview Review Import
+
+`POST /api/reviews/import/preview`
+
+- Purpose: parse and validate a review CSV before import.
+- JSON inputs: `csvText` and `approvedPublicData: true`.
+- Output: `{ data: { fileErrors, rows, summary } }`, including ready/rejected row status and user-safe rejection reasons.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: every row must reference a restaurant, location, and approved review source in the active agency. Restaurant-scoped memberships can import only for their assigned restaurant.
+- Data behavior: preview does not write reviews, audit logs, insights, or generated output.
+- Errors: `400` for invalid JSON, invalid request shape, missing required CSV columns, malformed rows, unsupported columns, duplicate row fields, unapproved source data confirmation, or invalid CSV syntax; `401` for missing context; `403` for invalid membership or read-only role.
+
+### Confirm Review Import
+
+`POST /api/reviews/import/confirm`
+
+- Purpose: re-run CSV validation and write only rows that are still ready.
+- JSON inputs: `csvText` and `approvedPublicData: true`.
+- Output: `{ data: { importedCount, preview } }`.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: confirm uses the same agency, membership, restaurant, location, approved source, malformed row, and duplicate review checks as preview.
+- Duplicate behavior: rows are rejected when the same `externalReviewId` appears more than once for a `reviewSourceId` in the CSV or already exists for that review source.
+- AI behavior: confirm writes source `Review` rows only. It does not generate AI insights, summaries, sentiment, themes, reports, or recommendations.
+- Errors: `400` for invalid JSON, invalid request shape, malformed CSV rows, invalid target rows, unapproved review sources, or duplicate external review IDs; `401` for missing context; `403` for invalid membership or read-only role.
+
+---
+
 ## AI Insight Generation APIs
 
 AI insight generation uses the existing server-side Google Gemini integration. It only uses explicitly selected imported reviews and stores generated output as draft evidence-linked insight records. It does not generate reports or competitor analysis.
