@@ -355,26 +355,39 @@ AI insight generation uses the existing server-side Google Gemini integration. I
 
 Reports use the existing Prisma `Report` model and store an HTML-ready snapshot in `sections` with the selected filters in `filters`. This slice does not generate PDF or CSV files.
 
+### Check Report Eligibility
+
+`GET /api/reports`
+
+- Purpose: check whether a selected restaurant, optional location, and date range has approved insights available for report creation.
+- Query inputs: `restaurantId`, optional `locationId`, `dateRangeStart`, and `dateRangeEnd` in `YYYY-MM-DD` format.
+- Output: `{ data: { approvedInsightCount, excludedDraftRejectedInsightCount, exportBlocked, message } }`.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: the selected restaurant and optional location must belong to the active agency, and restaurant-scoped memberships can check reports only for their assigned restaurant.
+- Insight behavior: `approvedInsightCount` counts only `APPROVED` insights with linked source reviews in scope; `excludedDraftRejectedInsightCount` counts matching `DRAFT` and `REJECTED` insights that remain excluded from report export.
+- Errors: `400` for invalid inputs, invalid date order, or location mismatch; `401` for missing context; `403` for read-only roles or out-of-scope restaurant access; `404` when the restaurant is outside the active agency.
+
 ### Create Approved Insight Report
 
 `POST /api/reports`
 
 - Purpose: create a tenant-scoped report snapshot from approved insights only.
 - JSON inputs: `restaurantId`, optional `locationId`, `dateRangeStart`, and `dateRangeEnd` in `YYYY-MM-DD` format.
-- Output: `{ data: Report }` with `status = "READY"`, `approvedOnly = true`, selected restaurant/location/date filters, approved insight summaries, source review counts, and supporting source metadata.
+- Output: `{ data: Report }` with `status = "READY"`, `approvedOnly = true`, selected restaurant/location/date filters, approved insight summaries, approved and excluded draft/rejected insight counts, source review counts, and supporting source metadata.
 - Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
 - Tenant behavior: the selected restaurant and optional location must belong to the active agency, and restaurant-scoped memberships can create reports only for their assigned restaurant.
 - Insight behavior: only `APPROVED` insights are selected. Draft, rejected, archived, and deleted insights are excluded.
 - Evidence behavior: every linked source review for an included insight must match the selected restaurant, optional location, and review publication date range.
 - Export behavior: no PDF or CSV file is generated; `fileUrl` and `storageKey` remain empty.
-- Errors: `400` for invalid inputs, invalid date order, location mismatch, or no approved insights matching the filters; `401` for missing context; `403` for read-only roles or out-of-scope restaurant access; `404` when the restaurant is outside the active agency.
+- Errors: `400` for invalid inputs, invalid date order, location mismatch, or blocked export when no approved insights match the filters; `401` for missing context; `403` for read-only roles or out-of-scope restaurant access; `404` when the restaurant is outside the active agency.
 
 ### Reports Page
 
 `GET /reports`
 
 - Purpose: select a restaurant, optional location, and date range, then create a stored report from approved insight summaries and source counts.
-- The page lists recent stored reports with status, selected scope, date range, approved insight count, and source review count.
+- The page shows approved insight count, excluded draft/rejected insight count, and user-safe export-blocking messaging for the selected filters.
+- The page lists recent stored reports with status, selected scope, date range, approved insight count, excluded draft/rejected insight count, and source review count.
 - Viewer users can inspect stored reports but cannot create new reports.
 
 ### Report Detail Page
@@ -383,7 +396,7 @@ Reports use the existing Prisma `Report` model and store an HTML-ready snapshot 
 
 - Purpose: show one stored report snapshot with selected filters, overview counts, approved insight summaries, and linked source review evidence.
 - Tenant behavior: the report must belong to the active agency, and restaurant-scoped memberships can open only reports for their assigned restaurant.
-- Draft and rejected insights are not shown in report details because they are excluded at report creation.
+- Draft and rejected insights are not shown in report details because they are excluded at report creation; stored detail snapshots show the count that was excluded.
 
 ---
 
