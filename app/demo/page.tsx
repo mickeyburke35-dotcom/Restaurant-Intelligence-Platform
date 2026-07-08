@@ -56,7 +56,7 @@ const demoSteps = [
   },
   {
     step: "06",
-    title: "AI Insight Generation",
+    title: "AI Insights",
     description: "Generate draft insights from selected imported review evidence.",
     href: "/insights",
     routeLabel: "/insights",
@@ -65,7 +65,7 @@ const demoSteps = [
   },
   {
     step: "07",
-    title: "AI Insight Approval",
+    title: "AI Approval",
     description: "Review evidence-linked draft insights before they become report-eligible.",
     href: "/insights",
     routeLabel: "/insights",
@@ -83,7 +83,7 @@ const demoSteps = [
   },
   {
     step: "09",
-    title: "Competitor Observations",
+    title: "Competitors",
     description: "Review manually entered competitor observations and market signal notes.",
     href: "/competitors",
     routeLabel: "/competitors",
@@ -106,7 +106,7 @@ export default function DemoHubPage() {
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted">
               Follow these live product routes in order to show the completed MVP workflow from
-              agency context through client-ready reporting and competitor observations.
+              agency context through approved reporting and competitor observations.
             </p>
           </div>
           <div className="rounded-md border border-line bg-panel p-5 shadow-soft">
