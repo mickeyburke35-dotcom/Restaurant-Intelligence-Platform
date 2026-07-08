@@ -40,6 +40,17 @@ Before coding, read AGENTS.md, README.md if present, memory/MEMORY.md, memory/le
 
 Work in small, focused edits that match existing naming, structure, and patterns. Ask for approval before adding dependencies, changing architecture, modifying auth or tenant logic, changing database schema, changing data collection rules, or altering AI insight behavior. Use branch names like feature/review-insights-dashboard or fix/tenant-filtering. PRs need a summary, testing notes, screenshots for UI changes, and migration notes when relevant.
 
+After every push to GitHub, spawn or run a security-audit subagent before opening or merging a PR. The audit must check the pushed diff for private information, secrets, API keys, database URLs, service-role keys, tokens, personal data, accidental .env commits, generated files, and unrelated coursework artifacts. The audit must report pass/fail, list files checked, list any findings, and recommend immediate remediation before merge.
+
+Post-push security audit checklist:
+
+- Check git diff against origin branch.
+- Search for common secrets: `GOOGLE_AI_API_KEY`, `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `AUTH_SESSION_SECRET`, `github_pat_`, `sk-`, and `AIza`.
+- Confirm `.env` is ignored.
+- Confirm no screenshots expose secrets.
+- Confirm no unrelated Popstop/Videoreport files are committed to the Restaurant Intelligence repo.
+- Confirm only intended files changed.
+
 ## Documentation And Done
 
 Update README.md when setup, commands, environment variables, or architecture change. Document API routes with purpose, inputs, outputs, auth requirements, and error cases. Keep .env.example complete.
