@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DemoHubLink } from "@/components/demo-hub-link";
 
 export type ReportRestaurantOptionView = {
   id: string;
@@ -190,7 +191,8 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
     <main className="min-h-screen bg-canvas text-ink">
       <section className="border-b border-line bg-[#f4f5ed]">
         <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-          <p className="text-sm font-semibold uppercase text-pine">Reports</p>
+          <DemoHubLink />
+          <p className="mt-4 text-sm font-semibold uppercase text-pine">Reports</p>
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-3xl font-semibold sm:text-4xl">Approved Insight Reports</h1>

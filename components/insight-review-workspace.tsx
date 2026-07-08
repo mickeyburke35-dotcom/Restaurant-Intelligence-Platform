@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { DemoHubLink } from "@/components/demo-hub-link";
 
 export type InsightReviewSourceView = {
   evidenceExcerpt: string | null;
@@ -358,7 +359,8 @@ export function InsightReviewWorkspace({
     <main className="min-h-screen bg-canvas text-ink">
       <section className="border-b border-line bg-[#f4f5ed]">
         <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-          <p className="text-sm font-semibold uppercase text-pine">AI insights</p>
+          <DemoHubLink />
+          <p className="mt-4 text-sm font-semibold uppercase text-pine">AI insights</p>
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-3xl font-semibold sm:text-4xl">AI Insight Review</h1>

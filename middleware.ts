@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSafeRedirectPath } from "@/lib/auth/request";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session";
 
-const PROTECTED_PREFIXES = ["/workspace"];
+const PROTECTED_PREFIXES = ["/workspace", "/demo"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -32,5 +32,5 @@ function isProtectedPath(pathname: string) {
 }
 
 export const config = {
-  matcher: ["/workspace/:path*", "/sign-in"]
+  matcher: ["/workspace/:path*", "/demo/:path*", "/sign-in"]
 };

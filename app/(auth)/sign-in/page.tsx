@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { getSafeRedirectPath } from "@/lib/auth/request";
 
@@ -27,6 +28,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           Use the email tied to your active agency membership.
         </p>
         <SignInForm nextPath={nextPath} />
+        <div className="mt-5 border-t border-[#DCD4CA] pt-5">
+          <Link
+            className="text-sm font-semibold text-[#3F5E4D] underline-offset-4 transition hover:text-[#31493D] hover:underline focus:outline-none focus:ring-2 focus:ring-[#D9EA75] focus:ring-offset-2 focus:ring-offset-[#FBFAF7]"
+            href="/demo"
+          >
+            Demo Hub
+          </Link>
+        </div>
       </div>
     </section>
   );

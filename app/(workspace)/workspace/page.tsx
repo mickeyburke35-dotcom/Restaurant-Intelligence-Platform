@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireActiveAuthContext } from "@/lib/auth/context";
 
 export const metadata: Metadata = {
@@ -19,6 +20,12 @@ export default async function WorkspacePage() {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[#647178]">
           Your active agency and membership role are resolved for protected routes.
         </p>
+        <Link
+          className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-[#3F5E4D] px-4 text-sm font-semibold text-[#FBFAF7] transition hover:bg-[#31493D] focus:outline-none focus:ring-2 focus:ring-[#D9EA75] focus:ring-offset-2 focus:ring-offset-[#FBFAF7] active:translate-y-px"
+          href="/demo"
+        >
+          Continue to Demo Hub
+        </Link>
 
         <dl className="mt-8 grid gap-4 sm:grid-cols-2">
           <div className="rounded-md border border-[#DCD4CA] bg-[#FDFCF9] p-4">

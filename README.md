@@ -116,7 +116,7 @@ npm run dev
 
 ### Demo Hub
 
-Open `/demo` for a single live-demonstration landing page. It links to the existing restaurant management, restaurant-scoped locations, reviews, AI insights, reports, and sign-in routes without adding business logic.
+Open `/demo` for a protected live-demonstration landing page. Unauthenticated visitors are redirected to `/sign-in?next=/demo`, signed-in users can continue from `/workspace` to the Demo Hub, and the sign-in page includes a subtle Demo Hub link for recording flows. The hub links to the existing restaurant management, restaurant-scoped locations, reviews, AI insights, reports, and sign-in routes without adding business logic. The restaurant, reviews, AI insights, and reports pages include a `← Demo Hub` return link in the upper-left page header.
 
 ### Build
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { ZodError } from "zod";
+import { DemoHubLink } from "@/components/demo-hub-link";
 import { ApiError } from "@/lib/api-errors";
 import { getRequestContext } from "@/lib/request-context";
 import {
@@ -49,7 +50,8 @@ function ReviewDashboardError({
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <section className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-16 sm:px-10">
-        <p className="text-sm font-semibold uppercase text-pine">Reviews</p>
+        <DemoHubLink />
+        <p className="mt-4 text-sm font-semibold uppercase text-pine">Reviews</p>
         <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">{title}</h1>
         <p className="mt-4 text-base leading-7 text-muted">{message}</p>
         <Link

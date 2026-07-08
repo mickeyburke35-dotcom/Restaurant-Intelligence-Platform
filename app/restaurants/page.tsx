@@ -1,6 +1,7 @@
 import { RestaurantStatus, type MembershipRole } from "@prisma/client";
 import Link from "next/link";
 import { archiveRestaurantAction } from "@/app/restaurants/actions";
+import { DemoHubLink } from "@/components/demo-hub-link";
 import {
   canManageRestaurants,
   getActiveAgencyContext,
@@ -247,6 +248,8 @@ function RestaurantPageShell({
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-8 sm:px-8">
+        <DemoHubLink />
+
         <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-medium text-pine">{context.agencyName}</p>

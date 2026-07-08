@@ -1,5 +1,6 @@
 import { Sentiment } from "@prisma/client";
 import Link from "next/link";
+import { DemoHubLink } from "@/components/demo-hub-link";
 import type {
   ListReviewsQuery,
   ListReviewsResult,
@@ -475,7 +476,8 @@ export function ReviewDashboard({
     <main className="min-h-screen bg-canvas text-ink">
       <section className="border-b border-[#dde2d8] bg-[#f4f5ed]">
         <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-          <p className="text-sm font-semibold uppercase text-pine">Reviews</p>
+          <DemoHubLink />
+          <p className="mt-4 text-sm font-semibold uppercase text-pine">Reviews</p>
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-3xl font-semibold sm:text-4xl">Review Dashboard</h1>
