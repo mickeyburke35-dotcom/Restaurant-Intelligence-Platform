@@ -4,6 +4,14 @@
 
 - No active sprint task captured yet.
 
+## AI Insight Approval Workflow Plan
+
+1. Keep the change limited to the insight service/API, AI insight review UI, and this todo file; do not modify auth, Prisma schema, review import, review dashboard, or reports.
+2. Make draft insights easy to list and review with source evidence, confidence, model, and generated timestamp visible before a decision.
+3. Ensure approval and rejection persist reviewer, reviewed timestamp, status, and optional notes while reviewed insights stay locked for auditability.
+4. Keep report eligibility explicit: only `APPROVED` insights are report-eligible; `DRAFT` and `REJECTED` insights remain excluded through existing report filtering.
+5. Verify with `npm run lint`, `npm run typecheck`, and `npm run build`.
+
 ## AI Insight Generation Current Plan
 
 1. Inspect the existing Gemini helper, AI insight service, insight persistence, and insight API routes against the requested review, restaurant, location, and date-range inputs.
@@ -161,6 +169,7 @@
 
 ## Completed
 
+- 2026-07-08: Implemented focused AI Insight Approval Workflow changes only in the insight service/API, AI insight review UI, and this todo file. Draft insights are the default review queue and are listable through `GET /api/insights`; the review UI shows source evidence, source location/rating/source metadata, confidence, model, and generated timestamp; approvals and rejections persist status, reviewer, reviewed timestamp, and optional notes in one transaction after verifying linked source-review evidence; reviewed insights remain locked. Report eligibility is explicit in the UI, and existing reports remain approved-only without modifying report code, keeping `DRAFT` and `REJECTED` insights out of report snapshots. `PROJECT_HANDOFF.md` was requested but was not present in the workspace. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Implemented the requested AI Insight Generation contract using the existing Gemini integration: `POST /api/insights/generate` now accepts restaurant, optional location, and date-range inputs to select approved imported review evidence, while preserving the existing explicit-review path; generated insights store summary, sentiment, themes, confidence score/level, generated timestamp, model, prompt version, `DRAFT` status, and `InsightSourceReview` links to every source review used. Reports remain approved-only through the existing report service filter, and no auth, Prisma schema, review import, review dashboard, reports, or approval-workflow behavior was changed. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Implemented CSV-only Review Import with row-level `restaurantId`, `locationId`, `reviewSourceId`, `externalReviewId`, `rating`, `reviewText`, `reviewedAt`, and optional `sourceUrl`; preview validates without database writes; confirm re-runs validation before writing ready `Review` rows only; malformed rows, invalid tenant/source targets, unapproved sources, restaurant-scope violations, duplicate in-file IDs, and existing external review IDs are rejected with user-safe messages. No Prisma schema regeneration, auth changes, CRUD changes, or AI insight generation were added. Updated README route docs and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Created Session 25-26 Governance, Security & IP deliverables only: `docs/governance.md`, `evidence/session-25-skill-risk-audit.md`, and `evidence/session-25-promise-to-proof.md`. `PROJECT_HANDOFF.md` was not present in the workspace, so current-app claims were grounded in the available requested docs and source files. No application code, dependencies, Prisma schema, data collection rules, AI behavior, customer data, production readiness claims, or unrelated project content were changed or added.

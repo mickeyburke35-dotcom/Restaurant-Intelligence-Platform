@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DemoHubLink } from "@/components/demo-hub-link";
 
 export type InsightReviewSourceView = {
   evidenceExcerpt: string | null;
   id: string;
+  locationName: string;
   rating: number | null;
   reviewId: string;
   reviewUrl: string | null;
@@ -74,6 +76,7 @@ export type InsightReviewWorkspaceData = {
   locations: InsightLocationOptionView[];
   restaurants: InsightRestaurantOptionView[];
   reviewOptions: InsightReviewOptionView[];
+  statusCounts: Record<string, number>;
 };
 
 type InsightReviewWorkspaceProps = {
@@ -106,6 +109,12 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   timeZoneName: "short",
   timeZone: "UTC"
 });
+
+const reviewQueueFilters = [
+  { label: "Draft", status: "DRAFT" },
+  { label: "Approved", status: "APPROVED" },
+  { label: "Rejected", status: "REJECTED" }
+] as const;
 
 function formatDate(value: string): string {
   return dateFormatter.format(new Date(value));
@@ -173,7 +182,7 @@ function decisionLabel(status: string): string {
 }
 
 function reportEligibilityLabel(status: string): string {
-  return status === "APPROVED" ? "Future reports" : "Not report eligible";
+  return status === "APPROVED" ? "Report eligible" : "Report excluded";
 }
 
 function reportEligibilityClassName(status: string): string {
@@ -229,6 +238,7 @@ export function InsightReviewWorkspace({
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeReviewAction, setActiveReviewAction] = useState<string | null>(null);
+  const activeStatus = initialStatus ?? "DRAFT";
 
   const selectedInsight =
     data.insights.find((insight) => insight.id === selectedInsightId) ?? data.insights[0] ?? null;
@@ -252,9 +262,9 @@ export function InsightReviewWorkspace({
     [data.reviewOptions, selectedLocationId, selectedRestaurantId]
   );
 
-  const draftCount = data.insights.filter((insight) => insight.status === "DRAFT").length;
-  const approvedCount = data.insights.filter((insight) => insight.status === "APPROVED").length;
-  const rejectedCount = data.insights.filter((insight) => insight.status === "REJECTED").length;
+  const draftCount = data.statusCounts.DRAFT ?? 0;
+  const approvedCount = data.statusCounts.APPROVED ?? 0;
+  const rejectedCount = data.statusCounts.REJECTED ?? 0;
   const selectedRestaurant = data.restaurants.find(
     (restaurant) => restaurant.id === selectedRestaurantId
   );
@@ -353,6 +363,16 @@ export function InsightReviewWorkspace({
     } finally {
       setActiveReviewAction(null);
     }
+  }
+
+  function queueHref(status: string): string {
+    const params = new URLSearchParams({ status });
+
+    if (initialRestaurantId) {
+      params.set("restaurantId", initialRestaurantId);
+    }
+
+    return `/insights?${params.toString()}`;
   }
 
   return (
@@ -519,10 +539,31 @@ export function InsightReviewWorkspace({
 
           <section className="overflow-hidden rounded-lg border border-line bg-white shadow-soft">
             <div className="border-b border-line px-4 py-3">
-              <h2 className="text-lg font-semibold">Review queue</h2>
-              {initialStatus ? (
-                <p className="mt-1 text-sm text-muted">Filtered to {formatEnum(initialStatus)}</p>
-              ) : null}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Insight review queue</h2>
+                  <p className="mt-1 text-sm text-muted">Filtered to {formatEnum(activeStatus)}</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  {reviewQueueFilters.map((filter) => {
+                    const isActive = activeStatus === filter.status;
+
+                    return (
+                      <Link
+                        className={`rounded-md border px-2 py-2 text-center font-semibold transition focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2 ${
+                          isActive
+                            ? statusClassName(filter.status)
+                            : "border-line bg-snow text-muted hover:border-pine hover:text-pine"
+                        }`}
+                        href={queueHref(filter.status)}
+                        key={filter.status}
+                      >
+                        {filter.label} {data.statusCounts[filter.status] ?? 0}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             {data.insights.length > 0 ? (
               <div className="divide-y divide-[#e7ebe4]">
@@ -539,7 +580,7 @@ export function InsightReviewWorkspace({
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">{insight.title}</span>
                         <span className="mt-1 block text-xs text-muted">
-                          {insight.restaurantName} - {formatDate(insight.generatedAt)}
+                          {insight.restaurantName} - {formatDateTime(insight.generatedAt)}
                         </span>
                       </span>
                       <span
@@ -567,7 +608,9 @@ export function InsightReviewWorkspace({
               </div>
             ) : (
               <div className="px-5 py-10 text-center text-sm leading-6 text-muted">
-                No AI insights are ready for review.
+                {activeStatus === "DRAFT"
+                  ? "No draft insights are waiting for review."
+                  : `No ${formatEnum(activeStatus).toLowerCase()} insights match this queue.`}
               </div>
             )}
           </section>
@@ -633,8 +676,8 @@ export function InsightReviewWorkspace({
                   </div>
                   <div className="rounded-md border border-line bg-snow px-3 py-2">
                     <span className="block text-xs font-semibold uppercase text-muted">Generated</span>
-                    <span className="mt-1 block font-semibold">
-                      {formatDate(selectedInsight.generatedAt)}
+                    <span className="mt-1 block font-semibold leading-5">
+                      {formatDateTime(selectedInsight.generatedAt)}
                     </span>
                   </div>
                 </div>
@@ -756,7 +799,8 @@ export function InsightReviewWorkspace({
                             {source.title?.trim() || `${formatRating(source.rating)} review`}
                           </p>
                           <p className="mt-1 text-xs text-muted">
-                            {formatDate(source.publishedAt)} - {source.sourceName} -{" "}
+                            {formatDate(source.publishedAt)} - {source.locationName} -{" "}
+                            {source.sourceName} - {formatRating(source.rating)} -{" "}
                             {formatEnum(source.sentiment)}
                           </p>
                         </div>

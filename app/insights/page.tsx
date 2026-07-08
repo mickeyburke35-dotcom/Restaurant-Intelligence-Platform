@@ -17,6 +17,7 @@ import {
   canManageInsights,
   getInsightReviewPageData,
   parseListInsightsSearchParams,
+  resolveListInsightsStatus,
   type InsightReviewItem,
   type InsightReviewOption
 } from "@/lib/insights";
@@ -110,7 +111,7 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
         data={serializeInsightReviewPageData(pageData)}
         initialInsightId={query.insightId}
         initialRestaurantId={query.restaurantId}
-        initialStatus={query.status}
+        initialStatus={resolveListInsightsStatus(query)}
       />
     );
   } catch (error) {
@@ -142,7 +143,8 @@ function serializeInsightReviewPageData(data: Awaited<ReturnType<typeof getInsig
         segment: restaurant.segment
       })
     ),
-    reviewOptions: data.reviewOptions.map(serializeReviewOption)
+    reviewOptions: data.reviewOptions.map(serializeReviewOption),
+    statusCounts: data.statusCounts
   };
 }
 
@@ -169,6 +171,7 @@ function serializeInsight(insight: InsightReviewItem): InsightReviewView {
         rating: decimalToNumber(source.review.rating),
         reviewId: source.review.id,
         reviewUrl: source.review.reviewUrl,
+        locationName: formatLocationName(source.review.location),
         sentiment: source.review.sentiment,
         sourceName: source.review.reviewSource.name,
         sourceType: source.review.reviewSource.sourceType,
