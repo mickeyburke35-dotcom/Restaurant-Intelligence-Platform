@@ -1,11 +1,6 @@
-import {
-  AuditEntityType,
-  Prisma,
-  SourceApprovalStatus
-} from "@prisma/client";
+import { AuditEntityType, Prisma, SourceApprovalStatus } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { badRequest, notFound } from "@/lib/api-errors";
 import { CsvParseError, parseCsv, type ParsedCsvRow } from "@/lib/csv-parser";
 import { prisma } from "@/lib/prisma";
 import type { RequestContext } from "@/lib/request-context";
@@ -14,25 +9,29 @@ const maxCsvCharacters = 1_000_000;
 const maxCsvRows = 2_000;
 
 type ReviewCsvField =
-  | "approvedPublic"
-  | "authorDisplayNameHash"
   | "externalReviewId"
-  | "language"
-  | "publishedAt"
+  | "locationId"
   | "rating"
-  | "reviewUrl"
-  | "text"
-  | "title";
+  | "restaurantId"
+  | "reviewSourceId"
+  | "reviewText"
+  | "reviewedAt"
+  | "sourceUrl";
 
 type ReviewCsvRawRow = Partial<Record<ReviewCsvField, string>>;
 
-type RejectionCategory = "MALFORMED" | "DUPLICATE_IN_FILE" | "DUPLICATE_EXISTING";
+type RejectionCategory =
+  | "DUPLICATE_EXISTING"
+  | "DUPLICATE_IN_FILE"
+  | "INVALID_TARGET"
+  | "MALFORMED";
 
 type ImportRowStatus = "READY" | "REJECTED";
 
 type InternalImportRow = {
   data?: ValidReviewCsvRow;
-  externalId?: string;
+  duplicateKey?: string;
+  externalReviewId?: string;
   reasonCategories: RejectionCategory[];
   reasons: string[];
   rowNumber: number;
@@ -40,14 +39,17 @@ type InternalImportRow = {
 };
 
 export type ReviewImportPreviewRow = {
-  externalId: string | null;
-  publishedAt: string | null;
+  externalReviewId: string | null;
+  locationId: string | null;
   rating: number | null;
   reasons: string[];
+  restaurantId: string | null;
+  reviewedAt: string | null;
+  reviewSourceId: string | null;
+  reviewTextExcerpt: string | null;
   rowNumber: number;
+  sourceUrl: string | null;
   status: ImportRowStatus;
-  textExcerpt: string | null;
-  title: string | null;
 };
 
 export type ReviewImportPreview = {
@@ -56,6 +58,7 @@ export type ReviewImportPreview = {
   summary: {
     duplicateRows: number;
     existingDuplicateRows: number;
+    invalidTargetRows: number;
     malformedRows: number;
     readyRows: number;
     rejectedRows: number;
@@ -73,10 +76,7 @@ export const reviewImportRequestSchema = z
     approvedPublicData: z
       .boolean()
       .refine((value) => value, "Confirm the CSV contains only approved public review data."),
-    csvText: z.string().trim().min(1).max(maxCsvCharacters),
-    locationId: z.string().uuid(),
-    restaurantId: z.string().uuid(),
-    reviewSourceId: z.string().uuid()
+    csvText: z.string().trim().min(1).max(maxCsvCharacters)
   })
   .strict();
 
@@ -98,47 +98,31 @@ const optionalNullableString = (maxLength: number) =>
 
 const ratingSchema = z.preprocess((value) => {
   if (value === undefined || value === null) {
-    return null;
+    return value;
   }
 
   const trimmed = String(value).trim();
 
   if (trimmed.length === 0) {
-    return null;
+    return value;
   }
 
   return Number(trimmed);
-}, z.number({ invalid_type_error: "Rating must be a number." }).min(1).max(5).nullable());
+}, z.number({ invalid_type_error: "Rating must be a number." }).min(1).max(5));
 
-const approvedPublicSchema = z.preprocess((value) => {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-
-  const normalized = String(value).trim().toLowerCase();
-
-  if (normalized.length === 0) {
-    return undefined;
-  }
-
-  if (["1", "approved", "public", "true", "yes", "y"].includes(normalized)) {
-    return true;
-  }
-
-  if (["0", "false", "no", "n", "private", "unapproved"].includes(normalized)) {
-    return false;
-  }
-
-  return value;
-}, z.boolean({ invalid_type_error: "Approved public must be true or false." }).optional());
+const sourceUrlSchema = optionalNullableString(2048).pipe(
+  z.string().url("Source URL must be a valid URL.").nullable()
+);
 
 const reviewCsvRowSchema = z
   .object({
-    approvedPublic: approvedPublicSchema,
-    authorDisplayNameHash: optionalNullableString(255),
     externalReviewId: z.string().trim().min(1).max(255),
-    language: optionalNullableString(20),
-    publishedAt: z
+    locationId: z.string().trim().uuid("Location ID must be a valid UUID."),
+    rating: ratingSchema,
+    restaurantId: z.string().trim().uuid("Restaurant ID must be a valid UUID."),
+    reviewSourceId: z.string().trim().uuid("Review source ID must be a valid UUID."),
+    reviewText: z.string().trim().min(1).max(10_000),
+    reviewedAt: z
       .string()
       .trim()
       .min(1)
@@ -148,7 +132,7 @@ const reviewCsvRowSchema = z
         if (Number.isNaN(parsedDate.getTime())) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Published date must be a valid date."
+            message: "Reviewed date must be a valid date."
           });
 
           return z.NEVER;
@@ -156,62 +140,46 @@ const reviewCsvRowSchema = z
 
         return parsedDate;
       }),
-    rating: ratingSchema,
-    reviewUrl: optionalNullableString(2048).pipe(
-      z
-        .string()
-        .url("Review URL must be a valid URL.")
-        .nullable()
-    ),
-    text: optionalNullableString(10_000),
-    title: optionalNullableString(255)
+    sourceUrl: sourceUrlSchema
   })
-  .superRefine((value, context) => {
-    if (value.approvedPublic === false) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Row is not marked as approved public review data.",
-        path: ["approvedPublic"]
-      });
-    }
-
-    if (value.rating === null && !value.text) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Review rows require a rating or review text."
-      });
-    }
-  });
+  .strict();
 
 type ValidReviewCsvRow = z.infer<typeof reviewCsvRowSchema>;
 
 const headerAliases = new Map<string, ReviewCsvField>([
-  ["approved_public", "approvedPublic"],
-  ["approved_public_data", "approvedPublic"],
-  ["author_display_name_hash", "authorDisplayNameHash"],
-  ["author_hash", "authorDisplayNameHash"],
-  ["author_name_hash", "authorDisplayNameHash"],
-  ["body", "text"],
-  ["content", "text"],
-  ["date", "publishedAt"],
   ["external_id", "externalReviewId"],
   ["external_review_id", "externalReviewId"],
-  ["is_public", "approvedPublic"],
-  ["language", "language"],
-  ["provider_review_id", "externalReviewId"],
-  ["public_review", "approvedPublic"],
-  ["published_at", "publishedAt"],
-  ["published_date", "publishedAt"],
+  ["location_id", "locationId"],
   ["rating", "rating"],
-  ["review_date", "publishedAt"],
+  ["restaurant_id", "restaurantId"],
   ["review_id", "externalReviewId"],
-  ["review_text", "text"],
-  ["review_url", "reviewUrl"],
-  ["source_url", "reviewUrl"],
-  ["text", "text"],
-  ["title", "title"],
-  ["url", "reviewUrl"]
+  ["review_source_id", "reviewSourceId"],
+  ["review_text", "reviewText"],
+  ["reviewed_at", "reviewedAt"],
+  ["reviewed_date", "reviewedAt"],
+  ["source_url", "sourceUrl"]
 ]);
+
+const requiredFields: ReviewCsvField[] = [
+  "restaurantId",
+  "locationId",
+  "reviewSourceId",
+  "externalReviewId",
+  "rating",
+  "reviewText",
+  "reviewedAt"
+];
+
+const fieldDisplayNames: Record<ReviewCsvField, string> = {
+  externalReviewId: "externalReviewId",
+  locationId: "locationId",
+  rating: "rating",
+  restaurantId: "restaurantId",
+  reviewSourceId: "reviewSourceId",
+  reviewText: "reviewText",
+  reviewedAt: "reviewedAt",
+  sourceUrl: "sourceUrl"
+};
 
 const disallowedHeaders = new Set([
   "author_display_name",
@@ -226,7 +194,11 @@ const disallowedHeaders = new Set([
 ]);
 
 function normalizeHeader(header: string): string {
-  return header.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return header
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
 }
 
 function validationMessages(error: z.ZodError): string[] {
@@ -237,7 +209,7 @@ function dedupeMessages(messages: string[]): string[] {
   return Array.from(new Set(messages));
 }
 
-function textExcerpt(text: string | null): string | null {
+function reviewTextExcerpt(text: string | null): string | null {
   if (!text) {
     return null;
   }
@@ -250,14 +222,20 @@ function payloadHash(row: ValidReviewCsvRow): string {
     .update(
       JSON.stringify({
         externalReviewId: row.externalReviewId,
-        publishedAt: row.publishedAt.toISOString(),
+        locationId: row.locationId,
         rating: row.rating,
-        reviewUrl: row.reviewUrl,
-        text: row.text,
-        title: row.title
+        restaurantId: row.restaurantId,
+        reviewSourceId: row.reviewSourceId,
+        reviewedAt: row.reviewedAt.toISOString(),
+        reviewText: row.reviewText,
+        sourceUrl: row.sourceUrl
       })
     )
     .digest("hex");
+}
+
+function duplicateKey(row: Pick<ValidReviewCsvRow, "externalReviewId" | "reviewSourceId">): string {
+  return `${row.reviewSourceId}:${row.externalReviewId}`;
 }
 
 function buildHeaderMap(headers: string[]): {
@@ -280,9 +258,7 @@ function buildHeaderMap(headers: string[]): {
 
     if (disallowedHeaders.has(normalizedHeader)) {
       fieldByColumn.push(null);
-      fileErrors.push(
-        `Column "${header}" is not allowed. Import hashed author display names only.`
-      );
+      fileErrors.push(`Column "${header}" is not allowed for public review import.`);
       return;
     }
 
@@ -302,13 +278,11 @@ function buildHeaderMap(headers: string[]): {
     fieldByColumn.push(field);
   });
 
-  if (!seenFields.has("externalReviewId")) {
-    fileErrors.push("CSV must include external_review_id.");
-  }
-
-  if (!seenFields.has("publishedAt")) {
-    fileErrors.push("CSV must include published_at.");
-  }
+  requiredFields.forEach((field) => {
+    if (!seenFields.has(field)) {
+      fileErrors.push(`CSV must include ${fieldDisplayNames[field]}.`);
+    }
+  });
 
   return {
     fieldByColumn,
@@ -337,16 +311,29 @@ function rejectRow(rowNumber: number, reasons: string[]): InternalImportRow {
   };
 }
 
+function rejectPreparedRow(
+  row: InternalImportRow,
+  categories: RejectionCategory[],
+  reasons: string[]
+) {
+  row.reasonCategories = Array.from(new Set([...row.reasonCategories, ...categories]));
+  row.reasons = dedupeMessages([...row.reasons, ...reasons]);
+  row.status = "REJECTED";
+}
+
 function publicPreview(rows: InternalImportRow[], fileErrors: string[]): ReviewImportPreview {
   const previewRows = rows.map<ReviewImportPreviewRow>((row) => ({
-    externalId: row.externalId ?? row.data?.externalReviewId ?? null,
-    publishedAt: row.data?.publishedAt.toISOString() ?? null,
+    externalReviewId: row.externalReviewId ?? row.data?.externalReviewId ?? null,
+    locationId: row.data?.locationId ?? null,
     rating: row.data?.rating ?? null,
     reasons: row.reasons,
+    restaurantId: row.data?.restaurantId ?? null,
+    reviewedAt: row.data?.reviewedAt.toISOString() ?? null,
+    reviewSourceId: row.data?.reviewSourceId ?? null,
+    reviewTextExcerpt: reviewTextExcerpt(row.data?.reviewText ?? null),
     rowNumber: row.rowNumber,
-    status: row.status,
-    textExcerpt: textExcerpt(row.data?.text ?? null),
-    title: row.data?.title ?? null
+    sourceUrl: row.data?.sourceUrl ?? null,
+    status: row.status
   }));
 
   return {
@@ -357,6 +344,8 @@ function publicPreview(rows: InternalImportRow[], fileErrors: string[]): ReviewI
       existingDuplicateRows: rows.filter((row) =>
         row.reasonCategories.includes("DUPLICATE_EXISTING")
       ).length,
+      invalidTargetRows: rows.filter((row) => row.reasonCategories.includes("INVALID_TARGET"))
+        .length,
       malformedRows: rows.filter((row) => row.reasonCategories.includes("MALFORMED")).length,
       readyRows: rows.filter((row) => row.status === "READY").length,
       rejectedRows: rows.filter((row) => row.status === "REJECTED").length,
@@ -377,63 +366,182 @@ function emptyPreview(fileErrors: string[]): {
   };
 }
 
-async function assertImportTargets(context: RequestContext, input: ReviewImportRequest) {
-  const restaurant = await prisma.restaurant.findFirst({
+function uniqueValues(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+async function validateImportTargets(
+  context: RequestContext,
+  internalRows: InternalImportRow[]
+): Promise<void> {
+  const validRows = internalRows.filter(
+    (row): row is InternalImportRow & { data: ValidReviewCsvRow } => row.data !== undefined
+  );
+
+  if (validRows.length === 0) {
+    return;
+  }
+
+  const restaurantIds = uniqueValues(validRows.map((row) => row.data.restaurantId));
+  const locationIds = uniqueValues(validRows.map((row) => row.data.locationId));
+  const reviewSourceIds = uniqueValues(validRows.map((row) => row.data.reviewSourceId));
+
+  const [restaurants, locations, reviewSources] = await prisma.$transaction([
+    prisma.restaurant.findMany({
+      where: {
+        agencyId: context.agencyId,
+        deletedAt: null,
+        id: {
+          in: restaurantIds
+        }
+      },
+      select: {
+        id: true
+      }
+    }),
+    prisma.location.findMany({
+      where: {
+        agencyId: context.agencyId,
+        deletedAt: null,
+        id: {
+          in: locationIds
+        }
+      },
+      select: {
+        id: true,
+        restaurantId: true
+      }
+    }),
+    prisma.reviewSource.findMany({
+      where: {
+        agencyId: context.agencyId,
+        deletedAt: null,
+        id: {
+          in: reviewSourceIds
+        }
+      },
+      select: {
+        approvalStatus: true,
+        id: true,
+        locationId: true,
+        restaurantId: true
+      }
+    })
+  ]);
+
+  const restaurantIdsInAgency = new Set(restaurants.map((restaurant) => restaurant.id));
+  const locationById = new Map(locations.map((location) => [location.id, location]));
+  const reviewSourceById = new Map(reviewSources.map((reviewSource) => [reviewSource.id, reviewSource]));
+
+  validRows.forEach((row) => {
+    const reasons: string[] = [];
+
+    if (!restaurantIdsInAgency.has(row.data.restaurantId)) {
+      reasons.push("Restaurant was not found in this agency.");
+    }
+
+    if (context.restaurantId && context.restaurantId !== row.data.restaurantId) {
+      reasons.push("Restaurant is outside your membership scope.");
+    }
+
+    const location = locationById.get(row.data.locationId);
+
+    if (!location || location.restaurantId !== row.data.restaurantId) {
+      reasons.push("Location must belong to the row restaurant and agency.");
+    }
+
+    const reviewSource = reviewSourceById.get(row.data.reviewSourceId);
+
+    if (!reviewSource) {
+      reasons.push("Review source was not found in this agency.");
+    } else {
+      if (!reviewSource.restaurantId) {
+        reasons.push("Review source must belong to a restaurant.");
+      } else if (reviewSource.restaurantId !== row.data.restaurantId) {
+        reasons.push("Review source must belong to the row restaurant.");
+      }
+
+      if (reviewSource.locationId && reviewSource.locationId !== row.data.locationId) {
+        reasons.push("Review source must match the row location.");
+      }
+
+      if (reviewSource.approvalStatus !== SourceApprovalStatus.APPROVED) {
+        reasons.push("Review source must be approved before importing reviews.");
+      }
+    }
+
+    if (reasons.length > 0) {
+      rejectPreparedRow(row, ["INVALID_TARGET"], reasons);
+    }
+  });
+}
+
+async function rejectDuplicateReviewRows(
+  context: RequestContext,
+  internalRows: InternalImportRow[]
+): Promise<void> {
+  const validRows = internalRows.filter(
+    (row): row is InternalImportRow & { data: ValidReviewCsvRow } => row.data !== undefined
+  );
+
+  if (validRows.length === 0) {
+    return;
+  }
+
+  const duplicateKeyCounts = new Map<string, number>();
+
+  validRows.forEach((row) => {
+    row.duplicateKey = duplicateKey(row.data);
+    duplicateKeyCounts.set(row.duplicateKey, (duplicateKeyCounts.get(row.duplicateKey) ?? 0) + 1);
+  });
+
+  const reviewSourceIds = uniqueValues(validRows.map((row) => row.data.reviewSourceId));
+  const externalReviewIds = uniqueValues(validRows.map((row) => row.data.externalReviewId));
+
+  const existingReviews = await prisma.review.findMany({
     where: {
       agencyId: context.agencyId,
-      deletedAt: null,
-      id: input.restaurantId
+      externalId: {
+        in: externalReviewIds
+      },
+      reviewSourceId: {
+        in: reviewSourceIds
+      }
     },
     select: {
-      id: true
+      externalId: true,
+      reviewSourceId: true
     }
   });
 
-  if (!restaurant) {
-    throw notFound("Restaurant not found.");
-  }
+  const existingDuplicateKeys = new Set(
+    existingReviews.map((review) =>
+      duplicateKey({
+        externalReviewId: review.externalId,
+        reviewSourceId: review.reviewSourceId
+      })
+    )
+  );
 
-  const location = await prisma.location.findFirst({
-    where: {
-      agencyId: context.agencyId,
-      deletedAt: null,
-      id: input.locationId,
-      restaurantId: input.restaurantId
-    },
-    select: {
-      id: true
+  validRows.forEach((row) => {
+    const reasons: string[] = [];
+    const categories: RejectionCategory[] = [];
+    const rowDuplicateKey = row.duplicateKey ?? duplicateKey(row.data);
+
+    if ((duplicateKeyCounts.get(rowDuplicateKey) ?? 0) > 1) {
+      reasons.push("External review ID appears more than once in this CSV for this review source.");
+      categories.push("DUPLICATE_IN_FILE");
+    }
+
+    if (existingDuplicateKeys.has(rowDuplicateKey)) {
+      reasons.push("External review ID has already been imported for this review source.");
+      categories.push("DUPLICATE_EXISTING");
+    }
+
+    if (reasons.length > 0) {
+      rejectPreparedRow(row, categories, reasons);
     }
   });
-
-  if (!location) {
-    throw badRequest("Location must belong to the selected restaurant and agency.");
-  }
-
-  const reviewSource = await prisma.reviewSource.findFirst({
-    where: {
-      agencyId: context.agencyId,
-      deletedAt: null,
-      id: input.reviewSourceId,
-      restaurantId: input.restaurantId
-    },
-    select: {
-      approvalStatus: true,
-      id: true,
-      locationId: true
-    }
-  });
-
-  if (!reviewSource) {
-    throw notFound("Review source not found.");
-  }
-
-  if (reviewSource.approvalStatus !== SourceApprovalStatus.APPROVED) {
-    throw badRequest("Review source must be approved before importing reviews.");
-  }
-
-  if (reviewSource.locationId && reviewSource.locationId !== input.locationId) {
-    throw badRequest("Review source must match the selected location.");
-  }
 }
 
 async function prepareReviewImport(
@@ -443,8 +551,6 @@ async function prepareReviewImport(
   internalRows: InternalImportRow[];
   preview: ReviewImportPreview;
 }> {
-  await assertImportTargets(context, input);
-
   let parsedCsv;
 
   try {
@@ -482,7 +588,8 @@ async function prepareReviewImport(
 
     return {
       data: result.data,
-      externalId: result.data.externalReviewId,
+      duplicateKey: duplicateKey(result.data),
+      externalReviewId: result.data.externalReviewId,
       reasonCategories: [],
       reasons: [],
       rowNumber: row.rowNumber,
@@ -490,60 +597,8 @@ async function prepareReviewImport(
     };
   });
 
-  const externalIdCounts = new Map<string, number>();
-  const validExternalIds = internalRows.flatMap((row) => {
-    if (!row.data) {
-      return [];
-    }
-
-    const currentCount = externalIdCounts.get(row.data.externalReviewId) ?? 0;
-    externalIdCounts.set(row.data.externalReviewId, currentCount + 1);
-
-    return [row.data.externalReviewId];
-  });
-
-  const existingReviews =
-    validExternalIds.length > 0
-      ? await prisma.review.findMany({
-          where: {
-            agencyId: context.agencyId,
-            externalId: {
-              in: Array.from(new Set(validExternalIds))
-            },
-            reviewSourceId: input.reviewSourceId
-          },
-          select: {
-            externalId: true
-          }
-        })
-      : [];
-
-  const existingExternalIds = new Set(existingReviews.map((review) => review.externalId));
-
-  internalRows.forEach((row) => {
-    if (!row.data) {
-      return;
-    }
-
-    const reasons: string[] = [];
-    const categories: RejectionCategory[] = [];
-
-    if ((externalIdCounts.get(row.data.externalReviewId) ?? 0) > 1) {
-      reasons.push("External review ID appears more than once in this CSV.");
-      categories.push("DUPLICATE_IN_FILE");
-    }
-
-    if (existingExternalIds.has(row.data.externalReviewId)) {
-      reasons.push("External review ID has already been imported for this review source.");
-      categories.push("DUPLICATE_EXISTING");
-    }
-
-    if (reasons.length > 0) {
-      row.reasons = dedupeMessages([...row.reasons, ...reasons]);
-      row.reasonCategories = Array.from(new Set([...row.reasonCategories, ...categories]));
-      row.status = "REJECTED";
-    }
-  });
+  await validateImportTargets(context, internalRows);
+  await rejectDuplicateReviewRows(context, internalRows);
 
   return {
     internalRows,
@@ -580,11 +635,9 @@ export async function confirmReviewImport(
   const importStartedAt = new Date();
   const createInput: Prisma.ReviewCreateManyInput[] = readyRows.map((row) => ({
     agencyId: context.agencyId,
-    authorDisplayNameHash: row.data.authorDisplayNameHash,
     collectedAt: importStartedAt,
     externalId: row.data.externalReviewId,
-    language: row.data.language,
-    locationId: input.locationId,
+    locationId: row.data.locationId,
     metadata: {
       approvedPublicData: true,
       importMethod: "CSV",
@@ -592,14 +645,13 @@ export async function confirmReviewImport(
       importedByUserId: context.userId,
       sourceRowNumber: row.rowNumber
     },
-    publishedAt: row.data.publishedAt,
+    publishedAt: row.data.reviewedAt,
     rating: row.data.rating,
-    restaurantId: input.restaurantId,
-    reviewSourceId: input.reviewSourceId,
-    reviewUrl: row.data.reviewUrl,
+    restaurantId: row.data.restaurantId,
+    reviewSourceId: row.data.reviewSourceId,
+    reviewUrl: row.data.sourceUrl,
     sourcePayloadHash: payloadHash(row.data),
-    text: row.data.text,
-    title: row.data.title
+    text: row.data.reviewText
   }));
 
   const result = await prisma.review.createMany({
@@ -611,12 +663,13 @@ export async function confirmReviewImport(
     data: {
       action: "review_import_confirmed",
       agencyId: context.agencyId,
-      entityId: input.reviewSourceId,
-      entityType: AuditEntityType.REVIEW_SOURCE,
+      entityId: null,
+      entityType: AuditEntityType.REVIEW,
       metadata: {
         importedCount: result.count,
         rejectedRows: preview.summary.rejectedRows,
-        reviewSourceId: input.reviewSourceId,
+        restaurantIds: uniqueValues(readyRows.map((row) => row.data.restaurantId)),
+        reviewSourceIds: uniqueValues(readyRows.map((row) => row.data.reviewSourceId)),
         totalRows: preview.summary.totalRows
       },
       userId: context.userId

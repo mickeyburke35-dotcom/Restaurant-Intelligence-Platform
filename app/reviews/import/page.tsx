@@ -2,9 +2,13 @@
 
 import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
 
+const csvTemplate =
+  "restaurantId,locationId,reviewSourceId,externalReviewId,rating,reviewText,reviewedAt,sourceUrl";
+
 type PreviewSummary = {
   duplicateRows: number;
   existingDuplicateRows: number;
+  invalidTargetRows: number;
   malformedRows: number;
   readyRows: number;
   rejectedRows: number;
@@ -12,14 +16,17 @@ type PreviewSummary = {
 };
 
 type PreviewRow = {
-  externalId: string | null;
-  publishedAt: string | null;
+  externalReviewId: string | null;
+  locationId: string | null;
   rating: number | null;
   reasons: string[];
+  restaurantId: string | null;
+  reviewedAt: string | null;
+  reviewSourceId: string | null;
+  reviewTextExcerpt: string | null;
   rowNumber: number;
+  sourceUrl: string | null;
   status: "READY" | "REJECTED";
-  textExcerpt: string | null;
-  title: string | null;
 };
 
 type ReviewImportPreview = {
@@ -56,12 +63,25 @@ function statusClassName(status: PreviewRow["status"]) {
     : "bg-[#f8e8e4] text-[#9d2f21]";
 }
 
+function formatDate(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium"
+  }).format(new Date(value));
+}
+
+function shortId(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+
+  return value.length > 12 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
+}
+
 export default function ReviewImportPage() {
-  const [agencyId, setAgencyId] = useState("");
-  const [userId, setUserId] = useState("");
-  const [restaurantId, setRestaurantId] = useState("");
-  const [locationId, setLocationId] = useState("");
-  const [reviewSourceId, setReviewSourceId] = useState("");
   const [csvText, setCsvText] = useState("");
   const [approvedPublicData, setApprovedPublicData] = useState(false);
   const [preview, setPreview] = useState<ReviewImportPreview | null>(null);
@@ -72,16 +92,9 @@ export default function ReviewImportPage() {
 
   const readyRows = preview?.summary.readyRows ?? 0;
   const rejectedRows = preview?.summary.rejectedRows ?? 0;
-  const canSubmit = useMemo(
-    () =>
-      agencyId.length > 0 &&
-      userId.length > 0 &&
-      restaurantId.length > 0 &&
-      locationId.length > 0 &&
-      reviewSourceId.length > 0 &&
-      csvText.trim().length > 0 &&
-      approvedPublicData,
-    [agencyId, approvedPublicData, csvText, locationId, restaurantId, reviewSourceId, userId]
+  const canPreview = useMemo(
+    () => csvText.trim().length > 0 && approvedPublicData,
+    [approvedPublicData, csvText]
   );
 
   async function readImportResponse<T>(response: Response): Promise<T> {
@@ -97,11 +110,14 @@ export default function ReviewImportPage() {
   function requestBody() {
     return {
       approvedPublicData,
-      csvText,
-      locationId,
-      restaurantId,
-      reviewSourceId
+      csvText
     };
+  }
+
+  function resetResultState() {
+    setPreview(null);
+    setImportedCount(null);
+    setErrorMessage(null);
   }
 
   async function submitPreview(event: FormEvent<HTMLFormElement>) {
@@ -114,9 +130,7 @@ export default function ReviewImportPage() {
       const response = await fetch("/api/reviews/import/preview", {
         body: JSON.stringify(requestBody()),
         headers: {
-          "content-type": "application/json",
-          "x-agency-id": agencyId,
-          "x-user-id": userId
+          "content-type": "application/json"
         },
         method: "POST"
       });
@@ -139,9 +153,7 @@ export default function ReviewImportPage() {
       const response = await fetch("/api/reviews/import/confirm", {
         body: JSON.stringify(requestBody()),
         headers: {
-          "content-type": "application/json",
-          "x-agency-id": agencyId,
-          "x-user-id": userId
+          "content-type": "application/json"
         },
         method: "POST"
       });
@@ -163,9 +175,7 @@ export default function ReviewImportPage() {
     }
 
     setCsvText(await file.text());
-    setPreview(null);
-    setImportedCount(null);
-    setErrorMessage(null);
+    resetResultState();
   }
 
   return (
@@ -177,7 +187,7 @@ export default function ReviewImportPage() {
             <div>
               <h1 className="text-3xl font-semibold sm:text-4xl">Review Import</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-                CSV intake for approved public restaurant reviews.
+                Preview and import approved public review CSV rows.
               </p>
             </div>
             {importedCount !== null ? (
@@ -188,67 +198,13 @@ export default function ReviewImportPage() {
           </div>
         </header>
 
-        <form className="grid gap-8 lg:grid-cols-[380px_minmax(0,1fr)]" onSubmit={submitPreview}>
+        <form className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]" onSubmit={submitPreview}>
           <section className="flex flex-col gap-6 border-r-0 border-[#d8ded9] lg:border-r lg:pr-8">
-            <div className="grid gap-4">
-              <div>
-                <label className="text-sm font-medium text-ink" htmlFor="agency-id">
-                  Agency ID
-                </label>
-                <input
-                  className={inputClassName()}
-                  id="agency-id"
-                  onChange={(event) => setAgencyId(event.target.value.trim())}
-                  value={agencyId}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-ink" htmlFor="user-id">
-                  User ID
-                </label>
-                <input
-                  className={inputClassName()}
-                  id="user-id"
-                  onChange={(event) => setUserId(event.target.value.trim())}
-                  value={userId}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4">
-              <div>
-                <label className="text-sm font-medium text-ink" htmlFor="restaurant-id">
-                  Restaurant ID
-                </label>
-                <input
-                  className={inputClassName()}
-                  id="restaurant-id"
-                  onChange={(event) => setRestaurantId(event.target.value.trim())}
-                  value={restaurantId}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-ink" htmlFor="location-id">
-                  Location ID
-                </label>
-                <input
-                  className={inputClassName()}
-                  id="location-id"
-                  onChange={(event) => setLocationId(event.target.value.trim())}
-                  value={locationId}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-ink" htmlFor="review-source-id">
-                  Review Source ID
-                </label>
-                <input
-                  className={inputClassName()}
-                  id="review-source-id"
-                  onChange={(event) => setReviewSourceId(event.target.value.trim())}
-                  value={reviewSourceId}
-                />
-              </div>
+            <div className="rounded-md border border-[#d8ded9] bg-white p-4">
+              <p className="text-xs font-semibold uppercase text-muted">Required columns</p>
+              <p className="mt-2 break-words font-mono text-xs leading-5 text-ink">
+                {csvTemplate}
+              </p>
             </div>
 
             <div className="grid gap-3">
@@ -263,13 +219,12 @@ export default function ReviewImportPage() {
                 type="file"
               />
               <textarea
-                className={`${inputClassName()} min-h-56 font-mono text-xs leading-5`}
+                className={`${inputClassName()} min-h-72 font-mono text-xs leading-5`}
                 onChange={(event) => {
                   setCsvText(event.target.value);
-                  setPreview(null);
-                  setImportedCount(null);
+                  resetResultState();
                 }}
-                placeholder="external_review_id,published_at,rating,text,review_url"
+                placeholder={csvTemplate}
                 value={csvText}
               />
             </div>
@@ -278,7 +233,10 @@ export default function ReviewImportPage() {
               <input
                 checked={approvedPublicData}
                 className="mt-1 h-4 w-4 accent-pine"
-                onChange={(event) => setApprovedPublicData(event.target.checked)}
+                onChange={(event) => {
+                  setApprovedPublicData(event.target.checked);
+                  setImportedCount(null);
+                }}
                 type="checkbox"
               />
               <span>CSV contains only approved public review data.</span>
@@ -287,14 +245,14 @@ export default function ReviewImportPage() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 className="rounded-md bg-pine px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#18594e] disabled:cursor-not-allowed disabled:bg-[#9bb4ad]"
-                disabled={!canSubmit || isPreviewing}
+                disabled={!canPreview || isPreviewing}
                 type="submit"
               >
                 {isPreviewing ? "Previewing" : "Preview"}
               </button>
               <button
                 className="rounded-md border border-steel px-4 py-2.5 text-sm font-semibold text-steel transition hover:bg-white disabled:cursor-not-allowed disabled:border-[#b8c3c1] disabled:text-[#9aa7a3]"
-                disabled={!preview || readyRows === 0 || isImporting}
+                disabled={!preview || readyRows === 0 || isImporting || importedCount !== null}
                 onClick={confirmImport}
                 type="button"
               >
@@ -312,7 +270,7 @@ export default function ReviewImportPage() {
 
             {preview ? (
               <div className="flex flex-col gap-5">
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
                   <div className="rounded-md border border-[#d8ded9] bg-white p-4">
                     <p className="text-xs font-medium uppercase text-muted">Total</p>
                     <p className="mt-2 text-2xl font-semibold">{preview.summary.totalRows}</p>
@@ -333,6 +291,12 @@ export default function ReviewImportPage() {
                     <p className="text-xs font-medium uppercase text-muted">Duplicates</p>
                     <p className="mt-2 text-2xl font-semibold text-[#8a5f12]">
                       {preview.summary.duplicateRows + preview.summary.existingDuplicateRows}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-[#d8ded9] bg-white p-4">
+                    <p className="text-xs font-medium uppercase text-muted">Targets</p>
+                    <p className="mt-2 text-2xl font-semibold">
+                      {preview.summary.invalidTargetRows}
                     </p>
                   </div>
                   <div className="rounded-md border border-[#d8ded9] bg-white p-4">
@@ -357,10 +321,13 @@ export default function ReviewImportPage() {
                     </p>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="min-w-[900px] divide-y divide-[#e4e9e6] text-left text-sm">
+                    <table className="min-w-[1120px] divide-y divide-[#e4e9e6] text-left text-sm">
                       <thead className="bg-[#f3f5f1] text-xs uppercase text-muted">
                         <tr>
                           <th className="px-4 py-3 font-semibold">Row</th>
+                          <th className="px-4 py-3 font-semibold">Restaurant</th>
+                          <th className="px-4 py-3 font-semibold">Location</th>
+                          <th className="px-4 py-3 font-semibold">Source</th>
                           <th className="px-4 py-3 font-semibold">External ID</th>
                           <th className="px-4 py-3 font-semibold">Date</th>
                           <th className="px-4 py-3 font-semibold">Rating</th>
@@ -373,14 +340,17 @@ export default function ReviewImportPage() {
                         {preview.rows.map((row) => (
                           <tr key={row.rowNumber} className="align-top">
                             <td className="px-4 py-3 font-medium">{row.rowNumber}</td>
-                            <td className="px-4 py-3">{row.externalId ?? "-"}</td>
-                            <td className="px-4 py-3">
-                              {row.publishedAt
-                                ? new Intl.DateTimeFormat("en", {
-                                    dateStyle: "medium"
-                                  }).format(new Date(row.publishedAt))
-                                : "-"}
+                            <td className="px-4 py-3" title={row.restaurantId ?? undefined}>
+                              {shortId(row.restaurantId)}
                             </td>
+                            <td className="px-4 py-3" title={row.locationId ?? undefined}>
+                              {shortId(row.locationId)}
+                            </td>
+                            <td className="px-4 py-3" title={row.reviewSourceId ?? undefined}>
+                              {shortId(row.reviewSourceId)}
+                            </td>
+                            <td className="px-4 py-3">{row.externalReviewId ?? "-"}</td>
+                            <td className="px-4 py-3">{formatDate(row.reviewedAt)}</td>
                             <td className="px-4 py-3">{row.rating ?? "-"}</td>
                             <td className="px-4 py-3">
                               <span
@@ -390,10 +360,9 @@ export default function ReviewImportPage() {
                               </span>
                             </td>
                             <td className="max-w-xs px-4 py-3 text-muted">
-                              {row.title ? <span className="font-medium text-ink">{row.title} </span> : null}
-                              {row.textExcerpt ?? "-"}
+                              {row.reviewTextExcerpt ?? "-"}
                             </td>
-                            <td className="max-w-xs px-4 py-3 text-muted">
+                            <td className="max-w-sm px-4 py-3 text-muted">
                               {row.reasons.length > 0 ? row.reasons.join(" ") : "-"}
                             </td>
                           </tr>
