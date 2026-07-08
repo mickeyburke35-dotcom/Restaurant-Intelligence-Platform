@@ -18,6 +18,8 @@ const reportManagerRoles = new Set<MembershipRole>([
   MembershipRole.ANALYST
 ]);
 
+const reportExcludedInsightStatuses = [InsightStatus.DRAFT, InsightStatus.REJECTED] as const;
+
 const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
 
 function emptyToNull(value: unknown) {
@@ -118,6 +120,8 @@ export const storedReportSectionsSchema = z.object({
   generatedAt: z.string(),
   insights: z.array(reportInsightSchema),
   overview: z.object({
+    approvedInsightCount: z.number().optional(),
+    excludedDraftRejectedInsightCount: z.number().optional(),
     highImpactCount: z.number(),
     insightCount: z.number(),
     sentimentCounts: z.record(z.number()),
@@ -248,7 +252,23 @@ export type ReportsPageData = {
   restaurants: ReportRestaurantOption[];
 };
 
+export type ReportInsightEligibility = {
+  approvedInsightCount: number;
+  excludedDraftRejectedInsightCount: number;
+  exportBlocked: boolean;
+  message: string | null;
+};
+
 type ApprovedInsight = Prisma.InsightGetPayload<{ select: typeof approvedInsightSelect }>;
+
+type ReportScope = {
+  dateRangeEnd: Date;
+  dateRangeStart: Date;
+  location: ReportLocationOption | null;
+  locationId: string | null;
+  restaurant: ReportRestaurantOption;
+  reviewScope: Prisma.InsightSourceReviewWhereInput;
+};
 
 export function canManageReports(context: RequestContext): boolean {
   return reportManagerRoles.has(context.role);
@@ -327,7 +347,146 @@ export async function createApprovedInsightsReport(
   input: CreateReportRequest
 ): Promise<ReportRecord> {
   assertCanManageReports(context);
+  const scope = await resolveReportScope(context, input);
 
+  const [approvedInsights, excludedDraftRejectedInsightCount] = await prisma.$transaction([
+    prisma.insight.findMany({
+      where: buildReportInsightWhere(context, scope, InsightStatus.APPROVED),
+      orderBy: [{ reviewedAt: "desc" }, { generatedAt: "desc" }, { id: "asc" }],
+      select: approvedInsightSelect
+    }),
+    prisma.insight.count({
+      where: buildReportInsightWhere(context, scope, {
+        in: [...reportExcludedInsightStatuses]
+      })
+    })
+  ]);
+
+  if (approvedInsights.length === 0) {
+    throw badRequest(reportExportBlockedMessage, {
+      approvedInsightCount: 0,
+      excludedDraftRejectedInsightCount
+    });
+  }
+
+  const generatedAt = new Date();
+  const locationName = scope.location ? formatLocationName(scope.location) : null;
+  const sections = buildReportSections(approvedInsights, generatedAt, {
+    excludedDraftRejectedInsightCount
+  });
+  const filters = buildReportFilters({
+    dateRangeEnd: scope.dateRangeEnd,
+    dateRangeStart: scope.dateRangeStart,
+    locationId: scope.locationId,
+    locationName,
+    restaurantId: scope.restaurant.id,
+    restaurantName: scope.restaurant.name
+  });
+  const title = buildReportTitle({
+    dateRangeEnd: scope.dateRangeEnd,
+    dateRangeStart: scope.dateRangeStart,
+    locationName,
+    restaurantName: scope.restaurant.name
+  });
+
+  return prisma.$transaction(async (tx) => {
+    const report = await tx.report.create({
+      data: {
+        agencyId: context.agencyId,
+        approvedOnly: true,
+        createdByUserId: context.userId,
+        dateRangeEnd: scope.dateRangeEnd,
+        dateRangeStart: scope.dateRangeStart,
+        filters,
+        format: ReportFormat.PDF,
+        generatedAt,
+        locationId: scope.locationId,
+        restaurantId: scope.restaurant.id,
+        sections,
+        status: ReportStatus.READY,
+        title
+      },
+      select: reportSelect
+    });
+
+    await tx.auditLog.create({
+      data: {
+        action: "report_created",
+        agencyId: context.agencyId,
+        entityId: report.id,
+        entityType: AuditEntityType.REPORT,
+        metadata: {
+          approvedOnly: true,
+          dateRangeEnd: scope.dateRangeEnd.toISOString(),
+          dateRangeStart: scope.dateRangeStart.toISOString(),
+          excludedDraftRejectedInsightCount,
+          insightCount: approvedInsights.length,
+          locationId: scope.locationId,
+          restaurantId: scope.restaurant.id,
+          sourceReviewCount: sections.overview.totalSourceReviews
+        },
+        userId: context.userId
+      }
+    });
+
+    return report;
+  });
+}
+
+export async function getReportInsightEligibility(
+  context: RequestContext,
+  input: CreateReportRequest
+): Promise<ReportInsightEligibility> {
+  assertCanManageReports(context);
+
+  const scope = await resolveReportScope(context, input);
+  const [approvedInsightCount, excludedDraftRejectedInsightCount] = await prisma.$transaction([
+    prisma.insight.count({
+      where: buildReportInsightWhere(context, scope, InsightStatus.APPROVED)
+    }),
+    prisma.insight.count({
+      where: buildReportInsightWhere(context, scope, {
+        in: [...reportExcludedInsightStatuses]
+      })
+    })
+  ]);
+
+  return {
+    approvedInsightCount,
+    excludedDraftRejectedInsightCount,
+    exportBlocked: approvedInsightCount === 0,
+    message: approvedInsightCount === 0 ? reportExportBlockedMessage : null
+  };
+}
+
+export function parseStoredReportSections(value: Prisma.JsonValue | null): StoredReportSections | null {
+  const parsed = storedReportSectionsSchema.safeParse(value);
+
+  return parsed.success ? parsed.data : null;
+}
+
+export function reportMetricsFromSections(value: Prisma.JsonValue | null): {
+  approvedInsightCount: number;
+  excludedDraftRejectedInsightCount: number;
+  insightCount: number;
+  sourceReviewCount: number;
+} {
+  const sections = parseStoredReportSections(value);
+  const insightCount = sections?.overview.insightCount ?? 0;
+
+  return {
+    approvedInsightCount: sections?.overview.approvedInsightCount ?? insightCount,
+    excludedDraftRejectedInsightCount:
+      sections?.overview.excludedDraftRejectedInsightCount ?? 0,
+    insightCount,
+    sourceReviewCount: sections?.overview.totalSourceReviews ?? 0
+  };
+}
+
+async function resolveReportScope(
+  context: RequestContext,
+  input: CreateReportRequest
+): Promise<ReportScope> {
   if (context.restaurantId && input.restaurantId !== context.restaurantId) {
     throw new AccessError("Your role cannot create reports for this restaurant.", 403);
   }
@@ -378,104 +537,33 @@ export async function createApprovedInsightsReport(
     }
   };
 
-  const approvedInsights = await prisma.insight.findMany({
-    where: {
-      agencyId: context.agencyId,
-      deletedAt: null,
-      restaurantId: input.restaurantId,
-      sourceReviewCount: {
-        gt: 0
-      },
-      sourceReviews: {
-        every: reviewScope,
-        some: reviewScope
-      },
-      status: InsightStatus.APPROVED
-    },
-    orderBy: [{ reviewedAt: "desc" }, { generatedAt: "desc" }, { id: "asc" }],
-    select: approvedInsightSelect
-  });
-
-  if (approvedInsights.length === 0) {
-    throw badRequest("No approved insights match the selected restaurant, location, and date range.");
-  }
-
-  const generatedAt = new Date();
-  const locationName = location ? formatLocationName(location) : null;
-  const sections = buildReportSections(approvedInsights, generatedAt);
-  const filters = buildReportFilters({
-    dateRangeEnd,
-    dateRangeStart,
-    locationId,
-    locationName,
-    restaurantId: restaurant.id,
-    restaurantName: restaurant.name
-  });
-  const title = buildReportTitle({
-    dateRangeEnd,
-    dateRangeStart,
-    locationName,
-    restaurantName: restaurant.name
-  });
-
-  return prisma.$transaction(async (tx) => {
-    const report = await tx.report.create({
-      data: {
-        agencyId: context.agencyId,
-        approvedOnly: true,
-        createdByUserId: context.userId,
-        dateRangeEnd,
-        dateRangeStart,
-        filters,
-        format: ReportFormat.PDF,
-        generatedAt,
-        locationId,
-        restaurantId: restaurant.id,
-        sections,
-        status: ReportStatus.READY,
-        title
-      },
-      select: reportSelect
-    });
-
-    await tx.auditLog.create({
-      data: {
-        action: "report_created",
-        agencyId: context.agencyId,
-        entityId: report.id,
-        entityType: AuditEntityType.REPORT,
-        metadata: {
-          approvedOnly: true,
-          dateRangeEnd: dateRangeEnd.toISOString(),
-          dateRangeStart: dateRangeStart.toISOString(),
-          insightCount: approvedInsights.length,
-          locationId,
-          restaurantId: restaurant.id,
-          sourceReviewCount: sections.overview.totalSourceReviews
-        },
-        userId: context.userId
-      }
-    });
-
-    return report;
-  });
-}
-
-export function parseStoredReportSections(value: Prisma.JsonValue | null): StoredReportSections | null {
-  const parsed = storedReportSectionsSchema.safeParse(value);
-
-  return parsed.success ? parsed.data : null;
-}
-
-export function reportMetricsFromSections(value: Prisma.JsonValue | null): {
-  insightCount: number;
-  sourceReviewCount: number;
-} {
-  const sections = parseStoredReportSections(value);
-
   return {
-    insightCount: sections?.overview.insightCount ?? 0,
-    sourceReviewCount: sections?.overview.totalSourceReviews ?? 0
+    dateRangeEnd,
+    dateRangeStart,
+    location,
+    locationId,
+    restaurant,
+    reviewScope
+  };
+}
+
+function buildReportInsightWhere(
+  context: RequestContext,
+  scope: ReportScope,
+  status: InsightStatus | Prisma.EnumInsightStatusFilter<"Insight">
+): Prisma.InsightWhereInput {
+  return {
+    agencyId: context.agencyId,
+    deletedAt: null,
+    restaurantId: scope.restaurant.id,
+    sourceReviewCount: {
+      gt: 0
+    },
+    sourceReviews: {
+      every: scope.reviewScope,
+      some: scope.reviewScope
+    },
+    status
   };
 }
 
@@ -501,7 +589,10 @@ function buildReportFilters(input: {
 
 function buildReportSections(
   insights: ApprovedInsight[],
-  generatedAt: Date
+  generatedAt: Date,
+  options: {
+    excludedDraftRejectedInsightCount: number;
+  }
 ): Prisma.InputJsonObject & StoredReportSections {
   const uniqueSourceReviewIds = new Set<string>();
   const sentimentCounts: Record<string, number> = {};
@@ -546,6 +637,8 @@ function buildReportSections(
     generatedAt: generatedAt.toISOString(),
     insights: reportInsights,
     overview: {
+      approvedInsightCount: insights.length,
+      excludedDraftRejectedInsightCount: options.excludedDraftRejectedInsightCount,
       highImpactCount: insights.filter((insight) => insight.highImpact).length,
       insightCount: insights.length,
       sentimentCounts,
@@ -555,6 +648,9 @@ function buildReportSections(
     version: 1
   };
 }
+
+const reportExportBlockedMessage =
+  "Report export is blocked because this selection has no approved insights. Draft and rejected insights are excluded from reports.";
 
 function buildReportTitle(input: {
   dateRangeEnd: Date;
