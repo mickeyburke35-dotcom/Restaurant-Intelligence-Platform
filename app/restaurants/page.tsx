@@ -51,22 +51,41 @@ function roleLabel(role: MembershipRole): string {
     .join(" ");
 }
 
-function RestaurantsEmptyState({ canManage }: { canManage: boolean }) {
+function RestaurantsEmptyState({
+  canManage,
+  hasActiveFilters
+}: {
+  canManage: boolean;
+  hasActiveFilters: boolean;
+}) {
   return (
     <div className="rounded-md border border-dashed border-line bg-panel px-6 py-12 text-center">
-      <h2 className="text-lg font-semibold text-ink">No restaurants found</h2>
+      <h2 className="text-lg font-semibold text-ink">
+        {hasActiveFilters ? "No restaurants match these filters" : "No restaurants found"}
+      </h2>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">
-        Add a restaurant client to begin organizing agency-scoped review intelligence. Locations,
-        reviews, AI insights, and reports stay out of this setup step.
+        {hasActiveFilters
+          ? "Reset the search or status filter to return to the full agency restaurant list."
+          : "Add a restaurant client to begin organizing agency-scoped review intelligence. Locations, reviews, AI insights, and reports stay out of this setup step."}
       </p>
-      {canManage ? (
-        <Link
-          href="/restaurants/new"
-          className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
-        >
-          Create restaurant
-        </Link>
-      ) : null}
+      <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        {hasActiveFilters ? (
+          <Link
+            href="/restaurants"
+            className="inline-flex h-10 w-full items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2 sm:w-fit"
+          >
+            Reset filters
+          </Link>
+        ) : null}
+        {canManage ? (
+          <Link
+            href="/restaurants/new"
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2 sm:w-fit"
+          >
+            Create restaurant
+          </Link>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -244,6 +263,7 @@ function RestaurantPageShell({
   filters: { q: string; status: string };
 }) {
   const canManage = canManageRestaurants(context);
+  const hasActiveFilters = Boolean(filters.q || filters.status !== "ALL");
 
   return (
     <main className="min-h-screen bg-canvas text-ink">
@@ -279,7 +299,7 @@ function RestaurantPageShell({
         {restaurants.length > 0 ? (
           <RestaurantTable restaurants={restaurants} canManage={canManage} />
         ) : (
-          <RestaurantsEmptyState canManage={canManage} />
+          <RestaurantsEmptyState canManage={canManage} hasActiveFilters={hasActiveFilters} />
         )}
       </div>
     </main>

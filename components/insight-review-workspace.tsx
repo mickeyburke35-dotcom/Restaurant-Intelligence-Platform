@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DemoHubLink } from "@/components/demo-hub-link";
 
@@ -276,7 +277,10 @@ export function InsightReviewWorkspace({
     setFeedback(null);
 
     if (!selectedRestaurantId || selectedReviewIds.length === 0) {
-      setFeedback({ tone: "error", text: "Select a restaurant and at least one review." });
+      setFeedback({
+        tone: "error",
+        text: "Choose a restaurant and select at least one approved review before generating drafts."
+      });
       return;
     }
 
@@ -419,6 +423,7 @@ export function InsightReviewWorkspace({
                   Restaurant
                   <select
                     className="h-11 rounded-md border border-line bg-snow px-3 text-sm text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/20"
+                    disabled={data.restaurants.length === 0}
                     onChange={(event) => {
                       setSelectedRestaurantId(event.target.value);
                       setSelectedLocationId("");
@@ -426,6 +431,9 @@ export function InsightReviewWorkspace({
                     }}
                     value={selectedRestaurantId}
                   >
+                    {data.restaurants.length === 0 ? (
+                      <option value="">No restaurants available</option>
+                    ) : null}
                     {data.restaurants.map((restaurant) => (
                       <option key={restaurant.id} value={restaurant.id}>
                         {restaurant.name}
@@ -488,19 +496,32 @@ export function InsightReviewWorkspace({
                       ))}
                     </div>
                   ) : (
-                    <div className="px-3 py-8 text-center text-sm leading-6 text-muted">
-                      No approved imported reviews are available for this selection.
+                    <div className="px-3 py-8 text-center">
+                      <h3 className="text-sm font-semibold text-ink">
+                        No approved reviews available
+                      </h3>
+                      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
+                        Import approved public reviews or switch to all locations before generating
+                        draft insights.
+                      </p>
+                      <Link
+                        className="mt-4 inline-flex h-9 items-center justify-center rounded-md border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
+                        href="/reviews/import"
+                      >
+                        Open import
+                      </Link>
                     </div>
                   )}
                 </div>
               </div>
 
               <button
+                aria-busy={isGenerating}
                 className="mt-4 h-10 w-full rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-[#9bb4ad]"
                 disabled={isGenerating || !selectedRestaurantId || selectedReviewIds.length === 0}
                 type="submit"
               >
-                {isGenerating ? "Generating drafts" : "Generate drafts"}
+                {isGenerating ? "Generating drafts..." : "Generate drafts"}
               </button>
             </form>
           ) : null}
@@ -512,6 +533,7 @@ export function InsightReviewWorkspace({
                   ? "border-[#b9d4c1] bg-[#edf7ef] text-positive"
                   : "border-[#e7bbb8] bg-[#fff1ef] text-negative"
               }`}
+              role={feedback.tone === "error" ? "alert" : "status"}
             >
               {feedback.text}
             </div>
@@ -566,8 +588,24 @@ export function InsightReviewWorkspace({
                 ))}
               </div>
             ) : (
-              <div className="px-5 py-10 text-center text-sm leading-6 text-muted">
-                No AI insights are ready for review.
+              <div className="px-5 py-10 text-center">
+                <h3 className="text-sm font-semibold text-ink">
+                  {initialStatus
+                    ? `No ${formatEnum(initialStatus).toLowerCase()} insights`
+                    : "No insights in the review queue"}
+                </h3>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
+                  Generate drafts from approved reviews, then approve or reject each insight before
+                  report use.
+                </p>
+                {initialStatus ? (
+                  <Link
+                    className="mt-4 inline-flex h-9 items-center justify-center rounded-md border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
+                    href="/insights"
+                  >
+                    View all statuses
+                  </Link>
+                ) : null}
               </div>
             )}
           </section>
@@ -612,7 +650,7 @@ export function InsightReviewWorkspace({
                     {selectedInsight.locationName ? ` - ${selectedInsight.locationName}` : ""}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4 lg:min-w-[460px]">
+                <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4 lg:w-[420px] xl:w-[460px]">
                   <div className="rounded-md border border-line bg-snow px-3 py-2">
                     <span className="block text-xs font-semibold uppercase text-muted">
                       Confidence
@@ -642,7 +680,9 @@ export function InsightReviewWorkspace({
 
               <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <div>
-                  <h3 className="text-sm font-semibold uppercase text-muted">Insight text</h3>
+                  <h3 className="text-sm font-semibold uppercase text-muted">
+                    AI-generated summary
+                  </h3>
                   <p className="mt-3 whitespace-pre-wrap text-base leading-7">
                     {selectedInsight.summary}
                   </p>
@@ -665,6 +705,12 @@ export function InsightReviewWorkspace({
                   <div className="rounded-md border border-line bg-snow px-3 py-2">
                     <dt className="font-medium text-muted">Approval status</dt>
                     <dd className="mt-1 font-semibold">{statusLabel(selectedInsight.status)}</dd>
+                  </div>
+                  <div className="rounded-md border border-line bg-snow px-3 py-2">
+                    <dt className="font-medium text-muted">Review requirement</dt>
+                    <dd className="mt-1 font-semibold">
+                      {selectedInsight.highImpact ? "Human review required" : "Human review tracked"}
+                    </dd>
                   </div>
                   <div className="rounded-md border border-line bg-snow px-3 py-2">
                     <dt className="font-medium text-muted">Prompt version</dt>
@@ -739,7 +785,7 @@ export function InsightReviewWorkspace({
               </section>
 
               <section className="border-t border-line pt-5">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-sm font-semibold uppercase text-muted">
                     Supporting review excerpts
                   </h3>
@@ -793,28 +839,30 @@ export function InsightReviewWorkspace({
                         />
                       </label>
                       <p className="mt-3 text-sm leading-6 text-muted">
-                        Approving marks this insight for future report use. Draft and rejected
-                        insights stay out of reports.
+                        Approve only when the summary is supported by the linked reviews. Rejected
+                        and draft insights stay out of reports.
                       </p>
                       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                         <button
+                          aria-busy={activeReviewAction === `${selectedInsight.id}:APPROVED`}
                           className="h-10 rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-[#9bb4ad]"
                           disabled={activeReviewAction !== null}
                           onClick={() => submitReviewAction(selectedInsight.id, "APPROVED")}
                           type="button"
                         >
                           {activeReviewAction === `${selectedInsight.id}:APPROVED`
-                            ? "Approving"
+                            ? "Approving..."
                             : "Approve"}
                         </button>
                         <button
+                          aria-busy={activeReviewAction === `${selectedInsight.id}:REJECTED`}
                           className="h-10 rounded-md border border-negative px-4 text-sm font-semibold text-negative transition hover:bg-[#fff1ef] disabled:cursor-not-allowed disabled:border-[#d8b9b5] disabled:text-[#a9827c]"
                           disabled={activeReviewAction !== null}
                           onClick={() => submitReviewAction(selectedInsight.id, "REJECTED")}
                           type="button"
                         >
                           {activeReviewAction === `${selectedInsight.id}:REJECTED`
-                            ? "Rejecting"
+                            ? "Rejecting..."
                             : "Reject"}
                         </button>
                       </div>
@@ -836,8 +884,14 @@ export function InsightReviewWorkspace({
               ) : null}
             </article>
           ) : (
-            <div className="flex min-h-[520px] items-center justify-center rounded-lg border border-dashed border-line bg-panel p-8 text-center text-sm leading-6 text-muted">
-              No AI insights are available for this agency.
+            <div className="flex min-h-[520px] items-center justify-center rounded-lg border border-dashed border-line bg-panel p-8 text-center">
+              <div>
+                <h2 className="text-lg font-semibold text-ink">No AI insight selected</h2>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">
+                  Generate draft insights from approved reviews, then use this panel to verify
+                  evidence, record a decision note, and approve or reject each draft.
+                </p>
+              </div>
             </div>
           )}
         </section>

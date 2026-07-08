@@ -65,6 +65,10 @@ function InsightPageError({
         <p className="mt-4 text-sm font-semibold uppercase text-pine">AI insights</p>
         <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">{title}</h1>
         <p className="mt-4 text-base leading-7 text-muted">{message}</p>
+        <div className="mt-6 rounded-md border border-line bg-panel px-4 py-3 text-sm leading-6 text-muted">
+          Reset the insight filters first. If the page still cannot load, confirm the active agency
+          context and that the selected insight belongs to that agency.
+        </div>
         <Link
           className="mt-8 inline-flex w-fit rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
           href="/insights"

@@ -424,7 +424,7 @@ model Insight {
   promptVersion     String?          @map("prompt_version")
   sourceReviewCount Int              @default(0) @map("source_review_count")
   highImpact        Boolean          @default(false) @map("high_impact")
-  status            InsightStatus    @default(NEEDS_REVIEW)
+  status            InsightStatus    @default(DRAFT)
   reviewedAt        DateTime?        @map("reviewed_at")
   reviewNotes       String?          @map("review_notes") @db.Text
   generatedAt       DateTime         @default(now()) @map("generated_at")
@@ -464,7 +464,9 @@ model InsightSourceReview {
   insight Insight @relation(fields: [insightId, agencyId], references: [id, agencyId], onDelete: Cascade)
   review  Review  @relation(fields: [reviewId, agencyId], references: [id, agencyId], onDelete: Restrict)
 
+  @@unique([id, agencyId])
   @@unique([insightId, reviewId])
+  @@unique([agencyId, insightId, reviewId])
   @@index([agencyId, insightId])
   @@index([agencyId, reviewId])
   @@map("insight_source_reviews")
@@ -513,6 +515,7 @@ model CompetitorObservation {
   agency     Agency     @relation(fields: [agencyId], references: [id], onDelete: Restrict)
   competitor Competitor @relation(fields: [competitorId, agencyId], references: [id, agencyId], onDelete: Restrict)
 
+  @@unique([id, agencyId])
   @@index([agencyId, competitorId, observedAt])
   @@index([agencyId, signalType, observedAt])
   @@index([agencyId, deletedAt])
@@ -547,6 +550,7 @@ model Report {
   location      Location?  @relation(fields: [locationId, agencyId], references: [id, agencyId], onDelete: Restrict)
   createdByUser User       @relation("ReportCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
 
+  @@unique([id, agencyId])
   @@index([agencyId, restaurantId, createdAt])
   @@index([agencyId, locationId])
   @@index([agencyId, status])
@@ -582,7 +586,9 @@ model ScheduledJob {
   location     Location?     @relation(fields: [locationId, agencyId], references: [id, agencyId], onDelete: Restrict)
   reviewSource ReviewSource? @relation(fields: [reviewSourceId, agencyId], references: [id, agencyId], onDelete: Restrict)
 
+  @@unique([id, agencyId])
   @@index([agencyId, jobType, status])
+  @@index([agencyId, nextRunAt, status])
   @@index([nextRunAt, status])
   @@index([agencyId, reviewSourceId])
   @@index([agencyId, restaurantId])
@@ -607,6 +613,7 @@ model AuditLog {
   agency Agency @relation(fields: [agencyId], references: [id], onDelete: Restrict)
   user   User?  @relation("AuditLogUser", fields: [userId], references: [id], onDelete: SetNull)
 
+  @@unique([id, agencyId])
   @@index([agencyId, createdAt])
   @@index([agencyId, entityType, entityId])
   @@index([agencyId, action])

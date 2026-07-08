@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { ZodError } from "zod";
+import { DemoHubLink } from "@/components/demo-hub-link";
 import { ApiError } from "@/lib/api-errors";
 import {
   getReportDetail,
@@ -120,9 +121,14 @@ function ReportDetailError({
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <section className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-16 sm:px-10">
-        <p className="text-sm font-semibold uppercase text-pine">Reports</p>
+        <DemoHubLink />
+        <p className="mt-5 text-sm font-semibold uppercase text-pine">Reports</p>
         <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">{title}</h1>
         <p className="mt-4 text-base leading-7 text-muted">{message}</p>
+        <div className="mt-6 rounded-md border border-line bg-panel px-4 py-3 text-sm leading-6 text-muted">
+          Check that the report link belongs to the active agency and that the stored snapshot is
+          still available.
+        </div>
         <Link
           className="mt-8 inline-flex w-fit rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
           href="/reports"
@@ -165,12 +171,15 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
       <main className="min-h-screen bg-canvas text-ink">
         <section className="border-b border-line bg-[#f4f5ed]">
           <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-            <Link
-              className="text-sm font-semibold text-pine underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
-              href="/reports"
-            >
-              Back to reports
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <DemoHubLink />
+              <Link
+                className="inline-flex h-9 w-fit items-center justify-center rounded-md border border-line bg-white px-3 text-xs font-semibold text-muted transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
+                href="/reports"
+              >
+                Back to reports
+              </Link>
+            </div>
             <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex flex-wrap gap-2">
@@ -243,7 +252,22 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
           </aside>
 
           <section className="grid min-w-0 gap-4">
-            {sections.insights.map((insight) => (
+            <section className="rounded-lg border border-line bg-white p-5 shadow-soft">
+              <p className="text-sm font-semibold uppercase text-muted">Snapshot overview</p>
+              <h2 className="mt-3 text-2xl font-semibold leading-tight">
+                Approved evidence for {report.restaurant.name}
+              </h2>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
+                This report includes {sections.overview.insightCount} approved insight
+                {sections.overview.insightCount === 1 ? "" : "s"} supported by{" "}
+                {sections.overview.totalSourceReviews} source review
+                {sections.overview.totalSourceReviews === 1 ? "" : "s"}. Draft and rejected
+                insights are excluded from the stored snapshot.
+              </p>
+            </section>
+
+            {sections.insights.length > 0 ? (
+              sections.insights.map((insight, index) => (
               <article
                 className="rounded-lg border border-line bg-white p-5 shadow-soft"
                 key={insight.insightId}
@@ -251,6 +275,9 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
                 <div className="flex flex-col gap-4 border-b border-line pb-5 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex flex-wrap gap-2">
+                      <span className="rounded-md border border-line bg-snow px-2.5 py-1 text-xs font-semibold text-muted">
+                        Insight {index + 1}
+                      </span>
                       <span
                         className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${sentimentClassName(
                           insight.sentiment
@@ -289,8 +316,12 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
                 </div>
 
                 <div className="py-5">
-                  <h3 className="text-sm font-semibold uppercase text-muted">Summary</h3>
-                  <p className="mt-3 whitespace-pre-wrap text-base leading-7">{insight.summary}</p>
+                  <h3 className="text-sm font-semibold uppercase text-muted">
+                    Approved insight summary
+                  </h3>
+                  <p className="mt-3 max-w-3xl whitespace-pre-wrap text-base leading-7">
+                    {insight.summary}
+                  </p>
                   {insight.themes.length > 0 ? (
                     <div className="mt-5 flex flex-wrap gap-2">
                       {insight.themes.map((theme) => (
@@ -306,7 +337,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
                 </div>
 
                 <section className="border-t border-line pt-5">
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-sm font-semibold uppercase text-muted">Source evidence</h3>
                     <span className="text-sm text-muted">
                       {insight.sourceReviewCount} linked reviews
@@ -344,7 +375,16 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
                   </div>
                 </section>
               </article>
-            ))}
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-line bg-panel p-8 text-center">
+                <h2 className="text-lg font-semibold text-ink">No approved insights stored</h2>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">
+                  The report snapshot is available, but it does not contain approved insight
+                  sections to display.
+                </p>
+              </div>
+            )}
           </section>
         </div>
       </main>

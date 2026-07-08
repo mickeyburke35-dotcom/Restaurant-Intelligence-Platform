@@ -54,6 +54,10 @@ function ReviewDashboardError({
         <p className="mt-4 text-sm font-semibold uppercase text-pine">Reviews</p>
         <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">{title}</h1>
         <p className="mt-4 text-base leading-7 text-muted">{message}</p>
+        <div className="mt-6 rounded-md border border-line bg-panel px-4 py-3 text-sm leading-6 text-muted">
+          Reset the filters first. If the message remains, confirm the active agency headers and
+          membership context before reloading the dashboard.
+        </div>
         <Link
           className="mt-8 inline-flex w-fit rounded-md border border-[#cfd8cf] bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
           href="/reviews"
