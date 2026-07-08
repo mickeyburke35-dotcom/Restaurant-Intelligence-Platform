@@ -4,6 +4,14 @@
 
 - No active sprint task captured yet.
 
+## Demo Hub MVP Walkthrough Plan
+
+1. Keep the change limited to `app/demo/page.tsx`, this todo file, and README only if the demo documentation needs the new walkthrough noted.
+2. Replace the existing six-card Demo Hub with the nine-step MVP demo path: Workspace, Restaurants, Locations, Review Import, Review Dashboard, AI Insight Generation, AI Insight Approval, Reports, and Competitor Observations.
+3. For each card, show the title, short description, route link, and suggested demo action while linking only to existing live MVP routes.
+4. Preserve the clean Scandinavian B2B SaaS style and avoid auth, Prisma schema, API, or feature changes.
+5. Verify with `npm run lint`, `npm run typecheck`, and `npm run build`, then record the outcome.
+
 ## Final Reports Workflow Plan
 
 1. Inspect the existing tenant-scoped report service, `POST /api/reports`, and reports UI to confirm where approved insights are selected and how report history/detail snapshots are displayed.
@@ -177,6 +185,7 @@
 
 ## Completed
 
+- 2026-07-08: Updated the Demo Hub to show the completed live MVP walkthrough path only. `/demo` now presents nine ordered cards for Workspace, Restaurants, Locations, Review Import, Review Dashboard, AI Insight Generation, AI Insight Approval, Reports, and Competitor Observations, with each card showing a title, short description, route link, and suggested demo action. Updated the README Demo Hub paragraph to match the current walkthrough. Did not modify authentication, Prisma schema, API logic, or add new features. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Implemented final Reports workflow changes only in the report service/API, reports UI, README, and this todo file. Reports still select only `APPROVED` insights with linked in-scope source reviews; `DRAFT` and `REJECTED` insights are counted as excluded and never stored as export-eligible report content. Added `GET /api/reports` eligibility checks, approved/excluded counts in the create flow, report history, and report detail snapshots, plus user-safe export-blocking messaging when no approved insights match the selected restaurant, optional location, and date range. Preserved existing report history/detail behavior and did not modify auth, Prisma schema, Review Import, Review Dashboard, AI generation, insight approval, or competitor features. `PROJECT_HANDOFF.md` was requested but was not present in the workspace. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Implemented focused AI Insight Approval Workflow changes only in the insight service/API, AI insight review UI, and this todo file. Draft insights are the default review queue and are listable through `GET /api/insights`; the review UI shows source evidence, source location/rating/source metadata, confidence, model, and generated timestamp; approvals and rejections persist status, reviewer, reviewed timestamp, and optional notes in one transaction after verifying linked source-review evidence; reviewed insights remain locked. Report eligibility is explicit in the UI, and existing reports remain approved-only without modifying report code, keeping `DRAFT` and `REJECTED` insights out of report snapshots. `PROJECT_HANDOFF.md` was requested but was not present in the workspace. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Implemented the requested AI Insight Generation contract using the existing Gemini integration: `POST /api/insights/generate` now accepts restaurant, optional location, and date-range inputs to select approved imported review evidence, while preserving the existing explicit-review path; generated insights store summary, sentiment, themes, confidence score/level, generated timestamp, model, prompt version, `DRAFT` status, and `InsightSourceReview` links to every source review used. Reports remain approved-only through the existing report service filter, and no auth, Prisma schema, review import, review dashboard, reports, or approval-workflow behavior was changed. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
