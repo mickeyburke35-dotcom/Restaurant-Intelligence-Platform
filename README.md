@@ -116,7 +116,7 @@ npm run dev
 
 ### Demo Hub
 
-Open `/demo` for a protected live-demonstration landing page. Unauthenticated visitors are redirected to `/sign-in?next=/demo`, signed-in users can continue from `/workspace` to the Demo Hub, and the sign-in page includes a subtle Demo Hub link for recording flows. The hub links to the existing restaurant management, restaurant-scoped locations, reviews, AI insights, reports, and sign-in routes without adding business logic. The restaurant, reviews, AI insights, and reports pages include a `← Demo Hub` return link in the upper-left page header.
+Open `/demo` for the protected live MVP demo path. Unauthenticated visitors are redirected to `/sign-in?next=/demo`, signed-in users can continue from `/workspace` to the Demo Hub, and the sign-in page includes a subtle Demo Hub link for recording flows. The hub presents the live walkthrough in order: Workspace, Restaurants, Locations, Review Import, Review Dashboard, AI Insight Generation, AI Insight Approval, Reports, and Competitor Observations. Each card links to an existing product route and includes a suggested presenter action; the Locations step starts from `/restaurants` because location management is reached from a selected restaurant row. The restaurant, reviews, AI insights, reports, and competitors pages include a `← Demo Hub` return link in the upper-left page header.
 
 ### Build
 
