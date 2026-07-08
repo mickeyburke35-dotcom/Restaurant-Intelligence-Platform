@@ -9,6 +9,12 @@ export default function Home() {
         <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
           Initial application shell for tenant-scoped product work.
         </p>
+        <a
+          className="mt-8 inline-flex w-fit rounded-md bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#184f45] focus:outline-none focus:ring-2 focus:ring-[#d9ea75] focus:ring-offset-2"
+          href="/ai/review-summary"
+        >
+          Open AI review summary test
+        </a>
       </section>
     </main>
   );
