@@ -4,6 +4,13 @@
 
 - No active sprint task captured yet.
 
+## AI Insight Generation Current Plan
+
+1. Inspect the existing Gemini helper, AI insight service, insight persistence, and insight API routes against the requested review, restaurant, location, and date-range inputs.
+2. Patch only the AI service layer, insight persistence, and insight API so generated insights are stored separately from reviews, linked to source reviews, default to `DRAFT`, and include summary, sentiment, themes, confidence, timestamp, and model metadata.
+3. Preserve authentication, Prisma schema, review import, review dashboard, reports, and approved-only report behavior without implementing the approval workflow.
+4. Verify with `npm run lint`, `npm run typecheck`, and `npm run build`, then record the outcome.
+
 ## Demo Sign-In Flow Navigation Plan
 
 1. Reuse the existing middleware protection pattern so `/demo` redirects unauthenticated visitors to `/sign-in?next=/demo`.
@@ -154,6 +161,7 @@
 
 ## Completed
 
+- 2026-07-08: Implemented the requested AI Insight Generation contract using the existing Gemini integration: `POST /api/insights/generate` now accepts restaurant, optional location, and date-range inputs to select approved imported review evidence, while preserving the existing explicit-review path; generated insights store summary, sentiment, themes, confidence score/level, generated timestamp, model, prompt version, `DRAFT` status, and `InsightSourceReview` links to every source review used. Reports remain approved-only through the existing report service filter, and no auth, Prisma schema, review import, review dashboard, reports, or approval-workflow behavior was changed. Verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Implemented CSV-only Review Import with row-level `restaurantId`, `locationId`, `reviewSourceId`, `externalReviewId`, `rating`, `reviewText`, `reviewedAt`, and optional `sourceUrl`; preview validates without database writes; confirm re-runs validation before writing ready `Review` rows only; malformed rows, invalid tenant/source targets, unapproved sources, restaurant-scope violations, duplicate in-file IDs, and existing external review IDs are rejected with user-safe messages. No Prisma schema regeneration, auth changes, CRUD changes, or AI insight generation were added. Updated README route docs and verified `npm run lint`, `npm run typecheck`, and `npm run build`.
 - 2026-07-08: Created Session 25-26 Governance, Security & IP deliverables only: `docs/governance.md`, `evidence/session-25-skill-risk-audit.md`, and `evidence/session-25-promise-to-proof.md`. `PROJECT_HANDOFF.md` was not present in the workspace, so current-app claims were grounded in the available requested docs and source files. No application code, dependencies, Prisma schema, data collection rules, AI behavior, customer data, production readiness claims, or unrelated project content were changed or added.
 - 2026-07-03: Created Session 20 Hugging Face scan deliverables only: `evidence/session-20-reflection.md`, `evidence/session-20-huggingface-scan.md`, and `evidence/session-20-strategic-note.md`. Documented the provided model, dataset, Space, fit, and limitations as research references only; none are currently implemented in the app. No application code, dependencies, Prisma schema, data collection rules, AI behavior, customer data, traction claims, or performance claims were changed or added.
