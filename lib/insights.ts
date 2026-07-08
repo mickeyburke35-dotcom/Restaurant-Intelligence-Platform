@@ -33,19 +33,81 @@ const emptyToUndefined = (value: unknown) => {
   return value;
 };
 
+const emptyToNull = (value: unknown) => {
+  if (value === "") {
+    return null;
+  }
+
+  return value;
+};
+
+const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+const maxInsightSourceReviews = 50;
+
 const optionalUuidSchema = z.preprocess(emptyToUndefined, z.string().uuid().optional());
+const optionalNullableUuidSchema = z.preprocess(
+  emptyToNull,
+  z.string().uuid().nullable().optional()
+);
+const optionalDateOnlySchema = z.preprocess(
+  emptyToUndefined,
+  z
+    .string()
+    .regex(dateOnlyPattern, "Date must use YYYY-MM-DD format.")
+    .refine(isValidDateOnly, "Date must be a valid calendar date.")
+    .optional()
+);
 
 export const generateInsightsRequestSchema = z
   .object({
-    locationId: z.string().uuid().nullable().optional(),
+    dateRangeEnd: optionalDateOnlySchema,
+    dateRangeStart: optionalDateOnlySchema,
+    locationId: optionalNullableUuidSchema,
     restaurantId: z.string().uuid(),
     reviewIds: z
       .array(z.string().uuid())
-      .min(1, "Select at least one review.")
-      .max(50, "Select 50 or fewer reviews.")
+      .min(1, "Select at least one review or provide a date range.")
+      .max(maxInsightSourceReviews, `Select ${maxInsightSourceReviews} or fewer reviews.`)
       .transform((reviewIds) => Array.from(new Set(reviewIds)))
+      .optional()
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const hasDateRange = Boolean(value.dateRangeStart || value.dateRangeEnd);
+
+    if (hasDateRange && (!value.dateRangeStart || !value.dateRangeEnd)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide both dateRangeStart and dateRangeEnd.",
+        path: value.dateRangeStart ? ["dateRangeEnd"] : ["dateRangeStart"]
+      });
+    }
+
+    if (!value.reviewIds && !hasDateRange) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide a date range or selected review IDs.",
+        path: ["dateRangeStart"]
+      });
+    }
+
+    if (
+      value.dateRangeStart &&
+      value.dateRangeEnd &&
+      dateOnlyToUtc(value.dateRangeStart, "start") > dateOnlyToUtc(value.dateRangeEnd, "end")
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "dateRangeEnd must be on or after dateRangeStart.",
+        path: ["dateRangeEnd"]
+      });
+    }
+  })
+  .transform((value) => ({
+    ...value,
+    locationId: value.locationId ?? null,
+    reviewIds: value.reviewIds ?? null
+  }));
 
 export const reviewInsightActionSchema = z
   .object({
@@ -245,6 +307,27 @@ export type InsightReviewPageData = {
   reviewOptions: InsightReviewOption[];
 };
 
+function isValidDateOnly(value: string): boolean {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function dateOnlyToUtc(value: string, boundary: "start" | "end"): Date {
+  const [year, month, day] = value.split("-").map(Number);
+
+  if (boundary === "start") {
+    return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  }
+
+  return new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+}
+
 function searchParamRecordToObject(
   searchParams: Record<string, string | string[] | undefined>
 ): Record<string, string> {
@@ -352,31 +435,88 @@ export async function generateDraftInsights(
     throw new AccessError("Your role cannot generate insights for this restaurant.", 403);
   }
 
-  const selectedReviewIds = Array.from(new Set(input.reviewIds));
-  const reviews = await prisma.review.findMany({
+  const locationId = input.locationId ?? null;
+  const dateRangeStart = input.dateRangeStart ? dateOnlyToUtc(input.dateRangeStart, "start") : null;
+  const dateRangeEnd = input.dateRangeEnd ? dateOnlyToUtc(input.dateRangeEnd, "end") : null;
+  const requestedReviewIds = input.reviewIds;
+  const restaurant = await prisma.restaurant.findFirst({
     where: {
       agencyId: context.agencyId,
       deletedAt: null,
-      id: {
-        in: selectedReviewIds
-      },
-      restaurantId: input.restaurantId,
-      ...(input.locationId ? { locationId: input.locationId } : {}),
-      reviewSource: {
-        approvalStatus: "APPROVED",
-        deletedAt: null
-      }
+      id: input.restaurantId
     },
+    select: restaurantOptionSelect
+  });
+
+  if (!restaurant) {
+    throw notFound("Restaurant not found.");
+  }
+
+  const location = locationId
+    ? await prisma.location.findFirst({
+        where: {
+          agencyId: context.agencyId,
+          deletedAt: null,
+          id: locationId,
+          restaurantId: input.restaurantId
+        },
+        select: locationOptionSelect
+      })
+    : null;
+
+  if (locationId && !location) {
+    throw badRequest("Location must belong to the selected restaurant.");
+  }
+
+  const reviewWhere: Prisma.ReviewWhereInput = {
+    agencyId: context.agencyId,
+    deletedAt: null,
+    restaurantId: input.restaurantId,
+    ...(locationId ? { locationId } : {}),
+    ...(dateRangeStart && dateRangeEnd
+      ? {
+          publishedAt: {
+            gte: dateRangeStart,
+            lte: dateRangeEnd
+          }
+        }
+      : {}),
+    ...(requestedReviewIds
+      ? {
+          id: {
+            in: requestedReviewIds
+          }
+        }
+      : {}),
+    reviewSource: {
+      approvalStatus: "APPROVED",
+      deletedAt: null
+    }
+  };
+  const reviews = await prisma.review.findMany({
+    where: reviewWhere,
     orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
+    ...(requestedReviewIds ? {} : { take: maxInsightSourceReviews + 1 }),
     select: reviewEvidenceSelect
   });
 
-  if (reviews.length !== selectedReviewIds.length) {
+  if (requestedReviewIds && reviews.length !== requestedReviewIds.length) {
     throw badRequest(
-      "Selected reviews must belong to the active agency, selected restaurant, and approved source."
+      "Selected reviews must belong to the active agency, selected restaurant, selected location, date range, and approved source."
     );
   }
 
+  if (!requestedReviewIds && reviews.length > maxInsightSourceReviews) {
+    throw badRequest(
+      `Date range includes more than ${maxInsightSourceReviews} approved imported reviews. Narrow the date range or select specific reviews.`
+    );
+  }
+
+  if (reviews.length === 0) {
+    throw badRequest("No approved imported reviews match the selected restaurant, location, and date range.");
+  }
+
+  const selectedReviewIds = requestedReviewIds ?? reviews.map((review) => review.id);
   const selectedReviewIdSet = new Set(selectedReviewIds);
   const evidenceByReviewId = new Map(reviews.map((review) => [review.id, review]));
   const generatedResult = await generateReviewInsightDrafts(
@@ -392,7 +532,13 @@ export async function generateDraftInsights(
       text: review.text,
       themes: review.themes,
       title: review.title
-    }))
+    })),
+    {
+      dateRangeEnd,
+      dateRangeStart,
+      locationName: location ? formatLocationName(location) : null,
+      restaurantName: restaurant.name
+    }
   );
   const generatedInsights = generatedResult.insights;
 
@@ -406,9 +552,13 @@ export async function generateDraftInsights(
       throw badRequest("AI response referenced a review that was not selected.");
     }
 
+    const confidenceLevel = insight.confidenceLevel ?? confidenceLevelFromScore(insight.confidence);
+    const confidence = insight.confidence ?? confidenceScoreFromLevel(confidenceLevel);
+
     return {
       ...insight,
-      confidenceLevel: insight.confidenceLevel ?? confidenceLevelFromScore(insight.confidence),
+      confidence,
+      confidenceLevel,
       highImpact: insight.highImpact || insight.type === InsightType.RECOMMENDATION,
       sourceReviewIds
     };
@@ -420,7 +570,7 @@ export async function generateDraftInsights(
     return [];
   }
 
-  const inferredLocationId = inferInsightLocationId(reviews, input.locationId ?? null);
+  const inferredLocationId = inferInsightLocationId(reviews, locationId);
   const model = generatedResult.model;
   const generatedAt = new Date();
 
@@ -516,10 +666,14 @@ export async function generateDraftInsights(
         entityId: createdInsights[0]?.id ?? null,
         entityType: AuditEntityType.INSIGHT,
         metadata: {
+          dateRangeEnd: dateRangeEnd?.toISOString() ?? null,
+          dateRangeStart: dateRangeStart?.toISOString() ?? null,
           generatedInsightCount: createdInsights.length,
+          locationId,
           model,
           promptVersion: REVIEW_INSIGHT_PROMPT_VERSION,
           reviewIds: selectedReviewIds,
+          restaurantId: restaurant.id,
           sourceReviewCount: selectedReviewIds.length
         },
         userId: context.userId
@@ -611,6 +765,17 @@ function confidenceLevelFromScore(score: number | null | undefined): ConfidenceL
   }
 
   return ConfidenceLevel.LOW;
+}
+
+function confidenceScoreFromLevel(level: ConfidenceLevel): number {
+  switch (level) {
+    case ConfidenceLevel.HIGH:
+      return 0.85;
+    case ConfidenceLevel.MEDIUM:
+      return 0.6;
+    case ConfidenceLevel.LOW:
+      return 0.3;
+  }
 }
 
 function evidenceExcerpt(
