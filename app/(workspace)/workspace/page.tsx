@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DemoHubLink } from "@/components/demo-hub-link";
 import { requireActiveAuthContext } from "@/lib/auth/context";
 
 export const metadata: Metadata = {
@@ -11,20 +12,21 @@ export default async function WorkspacePage() {
   const context = await requireActiveAuthContext("/workspace");
 
   return (
-    <section className="max-w-4xl">
+    <section className="flex max-w-4xl flex-col gap-4">
+      <DemoHubLink />
       <div className="rounded-md border border-[#DCD4CA] bg-[#FBFAF7] p-6">
         <p className="text-sm font-semibold text-[#3F5E4D]">Signed in</p>
         <h1 className="mt-3 text-3xl font-semibold text-[#26343B]">
           {context.agency.name}
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[#647178]">
-          Your active agency and membership role are resolved for protected routes.
+          Confirm the agency, role, and client scope before opening the live MVP walkthrough.
         </p>
         <Link
           className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-[#3F5E4D] px-4 text-sm font-semibold text-[#FBFAF7] transition hover:bg-[#31493D] focus:outline-none focus:ring-2 focus:ring-[#D9EA75] focus:ring-offset-2 focus:ring-offset-[#FBFAF7] active:translate-y-px"
           href="/demo"
         >
-          Continue to Demo Hub
+          Open Demo Hub
         </Link>
 
         <dl className="mt-8 grid gap-4 sm:grid-cols-2">

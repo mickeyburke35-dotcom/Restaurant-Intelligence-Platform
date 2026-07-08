@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { ZodError } from "zod";
+import { DemoHubLink } from "@/components/demo-hub-link";
 import { ApiError } from "@/lib/api-errors";
 import {
   getReportDetail,
@@ -120,7 +121,8 @@ function ReportDetailError({
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <section className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-16 sm:px-10">
-        <p className="text-sm font-semibold uppercase text-pine">Reports</p>
+        <DemoHubLink />
+        <p className="mt-4 text-sm font-semibold uppercase text-pine">Reports</p>
         <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">{title}</h1>
         <p className="mt-4 text-base leading-7 text-muted">{message}</p>
         <Link
@@ -169,8 +171,9 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
       <main className="min-h-screen bg-canvas text-ink">
         <section className="border-b border-line bg-[#f4f5ed]">
           <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
+            <DemoHubLink />
             <Link
-              className="text-sm font-semibold text-pine underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
+              className="mt-4 inline-flex h-9 w-fit items-center justify-center rounded-md border border-line bg-panel px-3 text-xs font-semibold text-muted transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2 focus:ring-offset-canvas active:translate-y-px"
               href="/reports"
             >
               Back to reports
