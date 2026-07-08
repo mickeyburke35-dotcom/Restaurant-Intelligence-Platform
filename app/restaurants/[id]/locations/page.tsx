@@ -2,6 +2,7 @@ import { LocationStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { archiveLocationAction } from "@/app/restaurants/actions";
+import { DemoHubLink } from "@/components/demo-hub-link";
 import { locationListFilterSchema } from "@/lib/location-validation";
 import { listTenantLocations, type LocationRecord } from "@/lib/locations";
 import {
@@ -64,26 +65,41 @@ function formatAddress(location: LocationRecord): string {
 
 function LocationEmptyState({
   canManage,
+  hasActiveFilters,
   restaurant
 }: {
   canManage: boolean;
+  hasActiveFilters: boolean;
   restaurant: RestaurantRecord;
 }) {
   return (
     <div className="rounded-md border border-dashed border-line bg-panel px-6 py-12 text-center">
-      <h2 className="text-lg font-semibold text-ink">No locations found</h2>
+      <h2 className="text-lg font-semibold text-ink">
+        {hasActiveFilters ? "No locations match these filters" : "No locations found"}
+      </h2>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">
-        Add a location to organize this restaurant client by market, city, or storefront.
-        Reviews, AI insights, dashboards, and reports stay out of this setup step.
+        {hasActiveFilters
+          ? "Reset the search or status filter to return to the full location list for this restaurant."
+          : "Add a location to organize this restaurant client by market, city, or storefront. Reviews, AI insights, dashboards, and reports stay out of this setup step."}
       </p>
-      {canManage ? (
-        <Link
-          href={`/restaurants/${restaurant.id}/locations/new`}
-          className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
-        >
-          Create location
-        </Link>
-      ) : null}
+      <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        {hasActiveFilters ? (
+          <Link
+            href={`/restaurants/${restaurant.id}/locations`}
+            className="inline-flex h-10 w-full items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2 sm:w-fit"
+          >
+            Reset filters
+          </Link>
+        ) : null}
+        {canManage ? (
+          <Link
+            href={`/restaurants/${restaurant.id}/locations/new`}
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2 sm:w-fit"
+          >
+            Create location
+          </Link>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -255,18 +271,22 @@ function LocationPageShell({
   restaurant: RestaurantRecord;
 }) {
   const canManage = canManageRestaurants(context);
+  const hasActiveFilters = Boolean(filters.q || filters.status !== "ALL");
 
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-8 sm:px-8">
         <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <Link
-              href="/restaurants"
-              className="text-sm font-medium text-pine transition hover:text-pine-dark"
-            >
-              Back to restaurants
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <DemoHubLink />
+              <Link
+                href="/restaurants"
+                className="inline-flex h-9 w-fit items-center justify-center rounded-md border border-line bg-panel px-3 text-xs font-semibold text-muted transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-lichen focus:ring-offset-2"
+              >
+                Back to restaurants
+              </Link>
+            </div>
             <h1 className="mt-3 text-2xl font-semibold text-ink">
               {restaurant.name} locations
             </h1>
@@ -290,7 +310,11 @@ function LocationPageShell({
         {locations.length > 0 ? (
           <LocationTable canManage={canManage} locations={locations} restaurant={restaurant} />
         ) : (
-          <LocationEmptyState canManage={canManage} restaurant={restaurant} />
+          <LocationEmptyState
+            canManage={canManage}
+            hasActiveFilters={hasActiveFilters}
+            restaurant={restaurant}
+          />
         )}
       </div>
     </main>

@@ -145,7 +145,10 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
     setFeedback(null);
 
     if (!selectedRestaurantId || !dateRangeStart || !dateRangeEnd) {
-      setFeedback({ tone: "error", text: "Select a restaurant and date range." });
+      setFeedback({
+        tone: "error",
+        text: "Choose a restaurant and both date fields before creating a report."
+      });
       return;
     }
 
@@ -260,6 +263,11 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
                     ))}
                   </select>
                 </label>
+                {data.restaurants.length === 0 ? (
+                  <div className="rounded-md border border-line bg-snow px-3 py-3 text-sm leading-6 text-muted">
+                    Add a restaurant client before creating approved insight reports.
+                  </div>
+                ) : null}
 
                 <label className="grid gap-2 text-sm font-medium text-muted">
                   Location
@@ -300,11 +308,12 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
               </div>
 
               <button
+                aria-busy={isCreating}
                 className="mt-4 h-10 w-full rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-[#9bb4ad]"
                 disabled={isCreating || !selectedRestaurantId || !dateRangeStart || !dateRangeEnd}
                 type="submit"
               >
-                {isCreating ? "Creating report" : "Create report"}
+                {isCreating ? "Creating report..." : "Create report"}
               </button>
             </form>
           ) : (
@@ -320,6 +329,7 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
                   ? "border-[#b9d4c1] bg-[#edf7ef] text-positive"
                   : "border-[#e7bbb8] bg-[#fff1ef] text-negative"
               }`}
+              role={feedback.tone === "error" ? "alert" : "status"}
             >
               {feedback.text}
             </div>
@@ -388,8 +398,28 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
                 ))}
               </div>
             ) : (
-              <div className="px-5 py-12 text-center text-sm leading-6 text-muted">
-                No reports have been created for this agency.
+              <div className="px-5 py-14 text-center">
+                <h3 className="text-lg font-semibold text-ink">No report snapshots yet</h3>
+                <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">
+                  Reports are created from approved AI insights only. Approve at least one
+                  evidence-linked insight for a restaurant, then return here to create a snapshot.
+                </p>
+                <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <Link
+                    className="inline-flex h-10 w-full items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2 sm:w-fit"
+                    href="/insights"
+                  >
+                    Open insight review
+                  </Link>
+                  {canManage ? (
+                    <Link
+                      className="inline-flex h-10 w-full items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2 sm:w-fit"
+                      href="/reviews"
+                    >
+                      Check review data
+                    </Link>
+                  ) : null}
+                </div>
               </div>
             )}
           </div>

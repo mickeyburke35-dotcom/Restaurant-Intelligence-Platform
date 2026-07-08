@@ -49,6 +49,10 @@ function ReportsPageError({
         <p className="mt-4 text-sm font-semibold uppercase text-pine">Reports</p>
         <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">{title}</h1>
         <p className="mt-4 text-base leading-7 text-muted">{message}</p>
+        <div className="mt-6 rounded-md border border-line bg-panel px-4 py-3 text-sm leading-6 text-muted">
+          Reload the reports list after confirming the active agency context. Report snapshots only
+          appear when approved insights exist for that agency.
+        </div>
         <Link
           className="mt-8 inline-flex w-fit rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
           href="/reports"

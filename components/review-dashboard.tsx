@@ -325,6 +325,16 @@ function ReviewDetailPanel({
         <p className="text-sm font-semibold uppercase">Review detail</p>
         <h2 className="mt-3 text-xl font-semibold">Detail unavailable</h2>
         <p className="mt-3 text-sm leading-6">{selectedReviewError}</p>
+        <p className="mt-2 text-sm leading-6">
+          Clear the selected row and choose another review from the current agency-scoped result
+          set.
+        </p>
+        <Link
+          className="mt-5 inline-flex h-10 items-center justify-center rounded-md border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-900 transition hover:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:ring-offset-2 focus:ring-offset-rose-50"
+          href={createReviewsHref(query, { reviewId: null })}
+        >
+          Clear selection
+        </Link>
       </aside>
     );
   }
@@ -335,8 +345,13 @@ function ReviewDetailPanel({
         <p className="text-sm font-semibold uppercase text-pine">Review detail</p>
         <h2 className="mt-3 text-xl font-semibold text-ink">No review selected</h2>
         <p className="mt-3 text-sm leading-6 text-muted">
-          Select a row to inspect the full review text, source, timestamps, and trace fields.
+          Open a review from the table to inspect the full text, source, timestamps, and trace
+          fields. The detail panel stays scoped to the same agency result set.
         </p>
+        <div className="mt-5 rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 text-muted">
+          Use this panel during demos to connect a table row with its source evidence before
+          generating or approving insights.
+        </div>
       </aside>
     );
   }
@@ -389,7 +404,7 @@ function ReviewDetailPanel({
             {review.reviewSource.name} - {formatEnum(review.reviewSource.sourceType)}
           </dd>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="font-medium text-muted">Published</dt>
             <dd className="mt-1 text-ink">{formatDateTime(review.publishedAt)}</dd>
@@ -399,7 +414,7 @@ function ReviewDetailPanel({
             <dd className="mt-1 text-ink">{formatDateTime(review.collectedAt)}</dd>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="font-medium text-muted">External ID</dt>
             <dd className="mt-1 break-all text-ink">{review.externalId}</dd>
@@ -471,6 +486,20 @@ export function ReviewDashboard({
   );
   const positiveCount = reviews.summary.sentimentCounts[Sentiment.POSITIVE];
   const negativeCount = reviews.summary.sentimentCounts[Sentiment.NEGATIVE];
+  const hasActiveFilters = Boolean(
+    query.search ||
+      query.restaurantId ||
+      query.locationId ||
+      query.reviewSourceId ||
+      query.rating ||
+      query.sentiment ||
+      query.dateFrom ||
+      query.dateTo
+  );
+  const resultCountLabel =
+    reviews.pagination.total > 0
+      ? `Showing ${startRow}-${endRow} of ${reviews.pagination.total} reviews`
+      : "No reviews in this view";
 
   return (
     <main className="min-h-screen bg-canvas text-ink">
@@ -486,7 +515,7 @@ export function ReviewDashboard({
               </p>
             </div>
             <div className="rounded-lg border border-[#cfd8cf] bg-white px-4 py-3 text-sm text-muted">
-              Showing {startRow}-{endRow} of {reviews.pagination.total} reviews
+              {resultCountLabel}
             </div>
           </div>
         </div>
@@ -655,13 +684,13 @@ export function ReviewDashboard({
               </label>
 
               <button
-                className="h-11 rounded-md bg-pine px-5 text-sm font-semibold text-white transition hover:bg-[#18584d] focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
+                className="h-11 w-full rounded-md bg-pine px-5 text-sm font-semibold text-white transition hover:bg-[#18584d] focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
                 type="submit"
               >
                 Apply
               </button>
               <Link
-                className="flex h-11 items-center justify-center rounded-md border border-[#cfd8cf] px-5 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
+                className="flex h-11 w-full items-center justify-center rounded-md border border-[#cfd8cf] px-5 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
                 href="/reviews"
               >
                 Reset
@@ -796,11 +825,31 @@ export function ReviewDashboard({
               </div>
             ) : (
               <div className="px-5 py-14 text-center">
-                <h3 className="text-lg font-semibold text-ink">No reviews found</h3>
+                <h3 className="text-lg font-semibold text-ink">
+                  {hasActiveFilters ? "No reviews match these filters" : "No approved reviews yet"}
+                </h3>
                 <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">
-                  No approved reviews match the current filters. Adjust the search, date range, or
-                  source filters to widen the result set.
+                  {hasActiveFilters
+                    ? "Adjust the search, date range, restaurant, location, source, or sentiment filters to widen the result set."
+                    : "Import approved public reviews before generating insights or building report snapshots."}
                 </p>
+                <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  {hasActiveFilters ? (
+                    <Link
+                      className="inline-flex h-10 w-full items-center justify-center rounded-md border border-[#cfd8cf] bg-white px-4 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2 sm:w-fit"
+                      href="/reviews"
+                    >
+                      Reset filters
+                    </Link>
+                  ) : (
+                    <Link
+                      className="inline-flex h-10 w-full items-center justify-center rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2 sm:w-fit"
+                      href="/reviews/import"
+                    >
+                      Open import
+                    </Link>
+                  )}
+                </div>
               </div>
             )}
           </section>
