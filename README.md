@@ -272,6 +272,44 @@ restaurantId,locationId,reviewSourceId,externalReviewId,rating,reviewText,review
 
 ---
 
+## Competitor Observation APIs
+
+Competitor observations are manually entered notes against existing competitor records. This workflow does not scrape sites, call provider APIs, generate AI output, or create competitor facts automatically.
+
+### List Competitors
+
+`GET /api/competitors`
+
+- Purpose: list tenant-scoped competitors with recent manual observations.
+- Query inputs: optional `restaurantId`, optional `locationId`, and `includeArchived=true|false`.
+- Output: `{ data: Competitor[] }`, including restaurant, optional location, and recent observations with observation date, channel/source, summary, sentiment, evidence note, source URL, and signal type.
+- Auth: any active agency role with access to the agency context.
+- Tenant behavior: every competitor is filtered by the active `agency_id`; restaurant-scoped memberships can list only their assigned restaurant.
+- Data behavior: reads stored competitor and observation records only. No scraping, external collection, AI generation, or fabricated competitor data.
+- Errors: `400` for invalid filters or location mismatch, `401` for missing context, `403` for invalid membership, and `404` when the selected restaurant is outside the active agency.
+
+### Create Competitor Observation
+
+`POST /api/competitors/:competitorId/observations`
+
+- Purpose: create one manual observation for an active competitor.
+- JSON inputs: `observedAt` in `YYYY-MM-DD` format, `channelSource`, `summary`, `sentiment`, `evidenceNote`, optional `sourceUrl`, and optional `signalType`.
+- Output: `{ data: CompetitorObservation }` with the saved observation date, channel/source, summary, sentiment, evidence note, source URL, and signal type.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: the competitor must belong to the active agency, and restaurant-scoped memberships can create observations only for their assigned restaurant.
+- Data behavior: stores user-entered observation text in the existing `CompetitorObservation` model. It does not create competitors, scrape sites, call provider APIs, generate AI output, or infer sentiment.
+- Errors: `400` for invalid JSON or invalid input, `401` for missing context, `403` for read-only roles, and `404` when the competitor is outside the active agency or not active.
+
+### Competitors Page
+
+`GET /competitors`
+
+- Purpose: select a restaurant, optional location, and competitor, then review or create manual observations.
+- The page shows observation date, channel/source, summary, sentiment, evidence note, source URL when provided, and safe empty/error states.
+- Viewer users can inspect permitted competitors and observations but cannot create new entries.
+
+---
+
 ## AI Insight Generation APIs
 
 AI insight generation uses the existing server-side Google Gemini integration. It only uses explicitly selected imported reviews and stores generated output as draft evidence-linked insight records. It does not generate reports or competitor analysis.
