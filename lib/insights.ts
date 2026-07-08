@@ -24,6 +24,7 @@ const insightManagerRoles = new Set<MembershipRole>([
 ]);
 
 const actionableInsightStatuses = [InsightStatus.APPROVED, InsightStatus.REJECTED] as const;
+const defaultInsightReviewStatus = InsightStatus.DRAFT;
 
 const emptyToUndefined = (value: unknown) => {
   if (value === "") {
@@ -305,6 +306,7 @@ export type InsightReviewPageData = {
   query: ListInsightsQuery;
   restaurants: InsightRestaurantOption[];
   reviewOptions: InsightReviewOption[];
+  statusCounts: Record<InsightStatus, number>;
 };
 
 function isValidDateOnly(value: string): boolean {
@@ -346,10 +348,22 @@ function searchParamRecordToObject(
   return result;
 }
 
+function searchParamsToObject(searchParams: URLSearchParams): Record<string, string> {
+  return Object.fromEntries(searchParams.entries());
+}
+
 export function parseListInsightsSearchParams(
   searchParams: Record<string, string | string[] | undefined>
 ): ListInsightsQuery {
   return listInsightsQuerySchema.parse(searchParamRecordToObject(searchParams));
+}
+
+export function parseListInsightsQuery(searchParams: URLSearchParams): ListInsightsQuery {
+  return listInsightsQuerySchema.parse(searchParamsToObject(searchParams));
+}
+
+export function resolveListInsightsStatus(query: ListInsightsQuery): InsightStatus {
+  return query.status ?? defaultInsightReviewStatus;
 }
 
 export function canManageInsights(context: RequestContext): boolean {
@@ -368,19 +382,33 @@ export async function getInsightReviewPageData(
 ): Promise<InsightReviewPageData> {
   const scopedRestaurantId = context.restaurantId ?? query.restaurantId;
   const restaurantScope = context.restaurantId ? { id: context.restaurantId } : {};
-  const insightWhere: Prisma.InsightWhereInput = {
+  const statusFilter = resolveListInsightsStatus(query);
+  const statusCountWhere: Prisma.InsightWhereInput = {
     agencyId: context.agencyId,
     deletedAt: null,
-    ...(scopedRestaurantId ? { restaurantId: scopedRestaurantId } : {}),
-    ...(query.status ? { status: query.status } : {})
+    ...(scopedRestaurantId ? { restaurantId: scopedRestaurantId } : {})
+  };
+  const insightWhere: Prisma.InsightWhereInput = {
+    ...statusCountWhere,
+    status: statusFilter
   };
 
-  const [insights, restaurants, locations, reviewOptions] = await prisma.$transaction([
+  const [insights, statusRows, restaurants, locations, reviewOptions] = await prisma.$transaction([
     prisma.insight.findMany({
       where: insightWhere,
-      orderBy: [{ status: "asc" }, { generatedAt: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ generatedAt: "desc" }, { createdAt: "desc" }, { id: "asc" }],
       take: 50,
       select: insightSelect
+    }),
+    prisma.insight.groupBy({
+      by: ["status"] as const,
+      orderBy: {
+        status: "asc"
+      },
+      where: statusCountWhere,
+      _count: {
+        _all: true
+      }
     }),
     prisma.restaurant.findMany({
       where: {
@@ -421,8 +449,36 @@ export async function getInsightReviewPageData(
     locations,
     query,
     restaurants,
-    reviewOptions
+    reviewOptions,
+    statusCounts: insightStatusCountsFromRows(statusRows)
   };
+}
+
+function emptyInsightStatusCounts(): Record<InsightStatus, number> {
+  return {
+    [InsightStatus.ARCHIVED]: 0,
+    [InsightStatus.APPROVED]: 0,
+    [InsightStatus.DRAFT]: 0,
+    [InsightStatus.NEEDS_REVIEW]: 0,
+    [InsightStatus.REJECTED]: 0
+  };
+}
+
+function insightStatusCountsFromRows(
+  rows: Array<{
+    _count?: true | {
+      _all?: number;
+    };
+    status: InsightStatus;
+  }>
+): Record<InsightStatus, number> {
+  const counts = emptyInsightStatusCounts();
+
+  for (const row of rows) {
+    counts[row.status] = typeof row._count === "object" ? row._count._all ?? 0 : 0;
+  }
+
+  return counts;
 }
 
 export async function generateDraftInsights(
@@ -699,6 +755,11 @@ export async function reviewInsightStatus(
       ...(context.restaurantId ? { restaurantId: context.restaurantId } : {})
     },
     select: {
+      _count: {
+        select: {
+          sourceReviews: true
+        }
+      },
       id: true,
       sourceReviewCount: true,
       status: true
@@ -713,42 +774,53 @@ export async function reviewInsightStatus(
     throw badRequest("Only draft insights can be approved or rejected. Reviewed insights are locked.");
   }
 
-  if (input.status === InsightStatus.APPROVED && currentInsight.sourceReviewCount < 1) {
+  if (
+    input.status === InsightStatus.APPROVED &&
+    (currentInsight.sourceReviewCount < 1 || currentInsight._count.sourceReviews < 1)
+  ) {
     throw badRequest("Insight requires source reviews before approval.");
   }
 
   const reviewedAt = new Date();
-  const updatedInsight = await prisma.insight.update({
-    where: {
-      id_agencyId: {
-        agencyId: context.agencyId,
-        id: currentInsight.id
-      }
-    },
-    data: {
-      reviewedAt,
-      reviewedByUserId: context.userId,
-      reviewNotes: input.reviewNotes ?? null,
-      status: input.status
-    },
-    select: insightSelect
-  });
-
-  await prisma.auditLog.create({
-    data: {
-      action: input.status === InsightStatus.APPROVED ? "ai_insight_approved" : "ai_insight_rejected",
-      agencyId: context.agencyId,
-      entityId: insightId,
-      entityType: AuditEntityType.INSIGHT,
-      metadata: {
-        reviewNotesPresent: Boolean(input.reviewNotes),
+  return prisma.$transaction(async (tx) => {
+    const updatedInsight = await tx.insight.update({
+      where: {
+        id_agencyId: {
+          agencyId: context.agencyId,
+          id: currentInsight.id
+        }
+      },
+      data: {
+        reviewedAt,
+        reviewedBy: {
+          connect: {
+            id: context.userId
+          }
+        },
+        reviewNotes: input.reviewNotes ?? null,
         status: input.status
       },
-      userId: context.userId
-    }
-  });
+      select: insightSelect
+    });
 
-  return updatedInsight;
+    await tx.auditLog.create({
+      data: {
+        action:
+          input.status === InsightStatus.APPROVED ? "ai_insight_approved" : "ai_insight_rejected",
+        agencyId: context.agencyId,
+        entityId: insightId,
+        entityType: AuditEntityType.INSIGHT,
+        metadata: {
+          reviewNotesPresent: Boolean(input.reviewNotes),
+          reviewedAt: reviewedAt.toISOString(),
+          status: input.status
+        },
+        userId: context.userId
+      }
+    });
+
+    return updatedInsight;
+  });
 }
 
 function confidenceLevelFromScore(score: number | null | undefined): ConfidenceLevel {
