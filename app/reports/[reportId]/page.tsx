@@ -160,6 +160,10 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
     }
 
     const locationName = report.location ? formatLocationName(report.location) : null;
+    const approvedInsightCount =
+      sections.overview.approvedInsightCount ?? sections.overview.insightCount;
+    const excludedDraftRejectedInsightCount =
+      sections.overview.excludedDraftRejectedInsightCount ?? 0;
 
     return (
       <main className="min-h-screen bg-canvas text-ink">
@@ -194,8 +198,9 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
                   to {formatDate(report.dateRangeEnd)}
                 </p>
               </div>
-              <div className="grid gap-2 text-sm sm:grid-cols-3">
-                <MetricCard label="Insights" value={sections.overview.insightCount} />
+              <div className="grid gap-2 text-sm sm:grid-cols-4">
+                <MetricCard label="Approved insights" value={approvedInsightCount} />
+                <MetricCard label="Draft/rejected excluded" value={excludedDraftRejectedInsightCount} />
                 <MetricCard label="Sources" value={sections.overview.totalSourceReviews} />
                 <MetricCard label="Human review" value={sections.overview.highImpactCount} />
               </div>

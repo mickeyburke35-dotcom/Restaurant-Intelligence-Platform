@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DemoHubLink } from "@/components/demo-hub-link";
@@ -24,6 +24,7 @@ export type ReportListItemView = {
   createdBy: string;
   dateRangeEnd: string;
   dateRangeStart: string;
+  excludedDraftRejectedInsightCount: number;
   generatedAt: string | null;
   id: string;
   insightCount: number;
@@ -50,14 +51,28 @@ type ReportsWorkspaceProps = {
 };
 
 type ApiErrorPayload = {
-  data?: {
-    id?: string;
-  };
   error?:
     | string
     | {
         message?: string;
       };
+};
+
+type CreateReportApiPayload = ApiErrorPayload & {
+  data?: {
+    id?: string;
+  };
+};
+
+type ReportEligibilityView = {
+  approvedInsightCount: number;
+  excludedDraftRejectedInsightCount: number;
+  exportBlocked: boolean;
+  message: string | null;
+};
+
+type ReportEligibilityApiPayload = ApiErrorPayload & {
+  data?: ReportEligibilityView;
 };
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -131,6 +146,9 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
   const [feedback, setFeedback] = useState<{ tone: "error" | "success"; text: string } | null>(
     null
   );
+  const [eligibility, setEligibility] = useState<ReportEligibilityView | null>(null);
+  const [eligibilityError, setEligibilityError] = useState<string | null>(null);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const visibleLocations = useMemo(
@@ -139,6 +157,73 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
   );
   const totalInsights = data.reports.reduce((sum, report) => sum + report.insightCount, 0);
   const totalSources = data.reports.reduce((sum, report) => sum + report.sourceReviewCount, 0);
+  const reportExportBlocked = Boolean(eligibility?.exportBlocked);
+  const canSubmitReport =
+    !isCreating &&
+    !isCheckingEligibility &&
+    Boolean(eligibility) &&
+    !reportExportBlocked &&
+    !eligibilityError &&
+    Boolean(selectedRestaurantId && dateRangeStart && dateRangeEnd);
+
+  useEffect(() => {
+    if (!canManage || !selectedRestaurantId || !dateRangeStart || !dateRangeEnd) {
+      setEligibility(null);
+      setEligibilityError(null);
+      setIsCheckingEligibility(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      dateRangeEnd,
+      dateRangeStart,
+      restaurantId: selectedRestaurantId
+    });
+
+    if (selectedLocationId) {
+      params.set("locationId", selectedLocationId);
+    }
+
+    setIsCheckingEligibility(true);
+    setEligibilityError(null);
+
+    async function fetchEligibility() {
+      try {
+        const response = await fetch(`/api/reports?${params.toString()}`, {
+          signal: controller.signal
+        });
+        const payload = (await response.json()) as ReportEligibilityApiPayload;
+
+        if (!response.ok) {
+          throw new Error(apiErrorMessage(payload, "Report eligibility could not be checked."));
+        }
+
+        if (!payload.data) {
+          throw new Error("Report eligibility could not be checked.");
+        }
+
+        setEligibility(payload.data);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setEligibility(null);
+        setEligibilityError(
+          error instanceof Error ? error.message : "Report eligibility could not be checked."
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsCheckingEligibility(false);
+        }
+      }
+    }
+
+    void fetchEligibility();
+
+    return () => controller.abort();
+  }, [canManage, dateRangeEnd, dateRangeStart, selectedLocationId, selectedRestaurantId]);
 
   async function submitReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -146,6 +231,21 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
 
     if (!selectedRestaurantId || !dateRangeStart || !dateRangeEnd) {
       setFeedback({ tone: "error", text: "Select a restaurant and date range." });
+      return;
+    }
+
+    if (eligibility?.exportBlocked) {
+      setFeedback({
+        tone: "error",
+        text:
+          eligibility.message ??
+          "Report export is blocked because this selection has no approved insights."
+      });
+      return;
+    }
+
+    if (eligibilityError) {
+      setFeedback({ tone: "error", text: eligibilityError });
       return;
     }
 
@@ -164,7 +264,7 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
         },
         method: "POST"
       });
-      const payload = (await response.json()) as ApiErrorPayload;
+      const payload = (await response.json()) as CreateReportApiPayload;
 
       if (!response.ok) {
         throw new Error(apiErrorMessage(payload, "Report could not be created."));
@@ -207,7 +307,9 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
                 <span className="mt-1 block text-xl font-semibold">{data.reports.length}</span>
               </div>
               <div className="rounded-md border border-[#b9d4c1] bg-[#edf7ef] px-4 py-3">
-                <span className="block text-xs font-semibold uppercase text-muted">Insights</span>
+                <span className="block text-xs font-semibold uppercase text-muted">
+                  Approved insights
+                </span>
                 <span className="mt-1 block text-xl font-semibold text-positive">
                   {totalInsights}
                 </span>
@@ -299,12 +401,46 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
                 </div>
               </div>
 
+              <div className="mt-5 border-t border-line pt-4">
+                <dl className="grid gap-3 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="font-medium text-muted">Approved insights</dt>
+                    <dd className="font-semibold text-positive">
+                      {isCheckingEligibility ? "Checking" : eligibility?.approvedInsightCount ?? 0}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="font-medium text-muted">Draft/rejected excluded</dt>
+                    <dd className="font-semibold">
+                      {isCheckingEligibility
+                        ? "Checking"
+                        : eligibility?.excludedDraftRejectedInsightCount ?? 0}
+                    </dd>
+                  </div>
+                </dl>
+                <p
+                  className={`mt-3 text-sm leading-6 ${
+                    reportExportBlocked || eligibilityError ? "text-negative" : "text-muted"
+                  }`}
+                >
+                  {isCheckingEligibility
+                    ? "Checking approved insight eligibility."
+                    : eligibilityError ??
+                      eligibility?.message ??
+                      "Only approved insights can be included. Draft and rejected insights remain excluded."}
+                </p>
+              </div>
+
               <button
                 className="mt-4 h-10 w-full rounded-md bg-pine px-4 text-sm font-semibold text-white transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-[#9bb4ad]"
-                disabled={isCreating || !selectedRestaurantId || !dateRangeStart || !dateRangeEnd}
+                disabled={!canSubmitReport}
                 type="submit"
               >
-                {isCreating ? "Creating report" : "Create report"}
+                {isCreating
+                  ? "Creating report"
+                  : reportExportBlocked
+                    ? "Export blocked"
+                    : "Create report"}
               </button>
             </form>
           ) : (
@@ -364,10 +500,10 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
                       </p>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-[120px_120px_auto] lg:items-center">
+                    <div className="grid gap-3 sm:grid-cols-[120px_120px_140px_auto] lg:items-center">
                       <div className="rounded-md border border-line bg-snow px-3 py-2 text-sm">
                         <span className="block text-xs font-semibold uppercase text-muted">
-                          Insights
+                          Approved
                         </span>
                         <span className="mt-1 block font-semibold">{report.insightCount}</span>
                       </div>
@@ -376,6 +512,14 @@ export function ReportsWorkspace({ canManage, data }: ReportsWorkspaceProps) {
                           Sources
                         </span>
                         <span className="mt-1 block font-semibold">{report.sourceReviewCount}</span>
+                      </div>
+                      <div className="rounded-md border border-line bg-snow px-3 py-2 text-sm">
+                        <span className="block text-xs font-semibold uppercase text-muted">
+                          Excluded
+                        </span>
+                        <span className="mt-1 block font-semibold">
+                          {report.excludedDraftRejectedInsightCount}
+                        </span>
                       </div>
                       <Link
                         className="inline-flex h-10 items-center justify-center rounded-md border border-line px-4 text-sm font-semibold text-ink transition hover:border-pine hover:text-pine focus:outline-none focus:ring-2 focus:ring-pine focus:ring-offset-2"
