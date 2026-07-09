@@ -9,13 +9,16 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 - Multi-tenant agency workspaces
 - Role-based access control
 - Restaurant and client management
+- Tenant-scoped review source management
 - Approved review import
 - AI-assisted sentiment analysis
 - Theme extraction
 - Insight generation
 - Competitor signal tracking
 - Dashboard analytics
-- PDF/CSV report export
+- Approved insight report snapshots
+- Live demo hub for existing product routes
+- PDF/CSV report export planning
 
 ---
 
@@ -44,7 +47,7 @@ Restaurant Intelligence Platform is a multi-tenant B2B SaaS application for hosp
 
 ### AI
 
-- OpenAI API
+- Google Gemini API for current review summary and insight generation
 
 ### Hosting
 
@@ -96,11 +99,24 @@ npm install
 
 All required environment variables are documented in `.env.example`. Keep secrets, API keys, tokens, customer data, and production credentials out of source control.
 
+For the lead capture API:
+
+- `SUPABASE_URL`: Supabase project URL used by the server route.
+- `SUPABASE_SERVICE_ROLE_KEY`: Server-only key used by `POST /api/demo/leads` to insert into `public.leads`.
+- `ZAPIER_LEAD_WEBHOOK_URL`: Server-only Zapier webhook URL notified after a successful lead insert.
+- `GOOGLE_AI_API_KEY`: Server-only Google AI key used by review summary and AI insight generation routes.
+
+Do not expose `SUPABASE_SERVICE_ROLE_KEY`, `ZAPIER_LEAD_WEBHOOK_URL`, or `GOOGLE_AI_API_KEY` to client components or `NEXT_PUBLIC_` variables.
+
 ### Development
 
 ```bash
 npm run dev
 ```
+
+### Demo Hub
+
+Open `/demo` for the protected live MVP demo path. Unauthenticated visitors are redirected to `/sign-in?next=/demo`, signed-in users can return from `/workspace` to the Demo Hub, and the sign-in page includes a subtle Demo Hub link for recording flows. The presentation flow starts at `/demo` and walks through Workspace, Restaurants, Locations, Review Import, Review Dashboard, AI Insights, AI Approval, Reports, and Competitors. Each card links to an existing product route and includes a suggested presenter action; the Locations step starts from `/restaurants` because location management is reached from a selected restaurant row. The main demo pages include a `← Demo Hub` return link: `/workspace`, `/restaurants`, `/restaurants/[id]/locations`, `/reviews/import`, `/reviews`, `/insights`, `/reports`, `/reports/[reportId]`, and `/competitors`. Internal AI testing pages are not linked from the normal presentation navigation.
 
 ### Build
 
@@ -136,6 +152,254 @@ npx prisma studio
 
 ---
 
+## Lead Capture API
+
+### `POST /api/demo/leads`
+
+Purpose: captures demo interest and stores the lead in Supabase before notifying Zapier.
+
+Input:
+
+```json
+{
+  "email": "name@company.com"
+}
+```
+
+Server behavior:
+
+- Validates the request body with Zod.
+- Inserts into `public.leads` with `email` and `source = "restaurant_demo"`.
+- After a successful Supabase insert, starts a fire-and-forget server-side POST to `ZAPIER_LEAD_WEBHOOK_URL` with `email`, `source`, and `created_at`.
+- Logs Zapier webhook delivery failures only; Zapier outages do not change the lead capture response.
+- Uses server-only Supabase and Zapier environment variables.
+
+Response:
+
+- `201`: `{ "ok": true, "message": "Thanks. We will follow up to schedule your demo." }`
+- `400`: invalid JSON or invalid email.
+- `500`: server configuration or unexpected request failure.
+- `502`: Supabase insert failure.
+
+Auth: public demo endpoint. It does not read or modify tenant-scoped restaurant intelligence data.
+
+---
+
+## Review Source APIs
+
+Review source endpoints manage source configuration records only. They do not scrape, call provider APIs, import reviews, create dashboards, or store AI insights.
+
+All routes require an active agency request context. The current route integration expects `x-agency-id` and `x-user-id`, then verifies that the user has an active membership in that agency. `VIEWER` users can read sources but cannot create, edit, or archive them.
+
+### List Review Sources
+
+`GET /api/restaurants/:restaurantId/review-sources`
+
+- Purpose: list review sources for one restaurant, optionally narrowed to one location.
+- Query inputs: `locationId` UUID, `includeArchived=true|false`.
+- Output: `{ data: ReviewSource[] }`, including the optional location summary.
+- Auth: any active agency role with access to the agency context.
+- Errors: `400` for invalid route or query input, `401` for missing agency or user context, `403` for invalid membership, `404` when the restaurant is outside the agency.
+
+### Create Review Source
+
+`POST /api/restaurants/:restaurantId/review-sources`
+
+- Purpose: create a source assigned to the restaurant and optionally one of its locations.
+- JSON inputs: `name`, `sourceType`, optional `locationId`, `approvalStatus`, `connectionStatus`, `externalAccountId`, `externalLocationId`, and `permissionNotes`.
+- Output: `{ data: ReviewSource }`.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid input or a location outside the restaurant, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the restaurant is outside the agency, `409` for duplicate provider identifiers.
+
+### Edit Review Source
+
+`PATCH /api/review-sources/:reviewSourceId`
+
+- Purpose: update source metadata, status, provider identifiers, permission notes, or connect/disconnect it from a location by setting `locationId`.
+- JSON inputs: any create field as a partial payload. Use `locationId: null` to remove the location link while keeping the restaurant assignment.
+- Output: `{ data: ReviewSource }`.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid input or a location outside the source restaurant, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the source is outside the agency, `409` for duplicate provider identifiers.
+
+### Archive Review Source
+
+`DELETE /api/review-sources/:reviewSourceId`
+
+- Purpose: soft archive a source and mark it `DISCONNECTED`; the database row remains for auditability.
+- Inputs: route `reviewSourceId` UUID.
+- Output: `{ data: ReviewSource }` with `deletedAt` set.
+- Auth: Owner, Admin, Manager, or Analyst. Viewer is read-only.
+- Errors: `400` for invalid route input, `401` for missing agency or user context, `403` for invalid membership or read-only role, `404` when the source is outside the agency or already archived.
+
+---
+
+## Review Import APIs
+
+Review import is CSV-only. It accepts approved public review data, validates each row against the active agency context, and keeps AI insight generation separate.
+
+CSV columns:
+
+```text
+restaurantId,locationId,reviewSourceId,externalReviewId,rating,reviewText,reviewedAt,sourceUrl
+```
+
+`sourceUrl` is optional. All other columns are required. The selected restaurant, location, and review source are read from each row, not from route parameters.
+
+### Preview Review Import
+
+`POST /api/reviews/import/preview`
+
+- Purpose: parse and validate a review CSV before import.
+- JSON inputs: `csvText` and `approvedPublicData: true`.
+- Output: `{ data: { fileErrors, rows, summary } }`, including ready/rejected row status and user-safe rejection reasons.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: every row must reference a restaurant, location, and approved review source in the active agency. Restaurant-scoped memberships can import only for their assigned restaurant.
+- Data behavior: preview does not write reviews, audit logs, insights, or generated output.
+- Errors: `400` for invalid JSON, invalid request shape, missing required CSV columns, malformed rows, unsupported columns, duplicate row fields, unapproved source data confirmation, or invalid CSV syntax; `401` for missing context; `403` for invalid membership or read-only role.
+
+### Confirm Review Import
+
+`POST /api/reviews/import/confirm`
+
+- Purpose: re-run CSV validation and write only rows that are still ready.
+- JSON inputs: `csvText` and `approvedPublicData: true`.
+- Output: `{ data: { importedCount, preview } }`.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: confirm uses the same agency, membership, restaurant, location, approved source, malformed row, and duplicate review checks as preview.
+- Duplicate behavior: rows are rejected when the same `externalReviewId` appears more than once for a `reviewSourceId` in the CSV or already exists for that review source.
+- AI behavior: confirm writes source `Review` rows only. It does not generate AI insights, summaries, sentiment, themes, reports, or recommendations.
+- Errors: `400` for invalid JSON, invalid request shape, malformed CSV rows, invalid target rows, unapproved review sources, or duplicate external review IDs; `401` for missing context; `403` for invalid membership or read-only role.
+
+---
+
+## Competitor Observation APIs
+
+Competitor observations are manually entered notes against existing competitor records. This workflow does not scrape sites, call provider APIs, generate AI output, or create competitor facts automatically.
+
+### List Competitors
+
+`GET /api/competitors`
+
+- Purpose: list tenant-scoped competitors with recent manual observations.
+- Query inputs: optional `restaurantId`, optional `locationId`, and `includeArchived=true|false`.
+- Output: `{ data: Competitor[] }`, including restaurant, optional location, and recent observations with observation date, channel/source, summary, sentiment, evidence note, source URL, and signal type.
+- Auth: any active agency role with access to the agency context.
+- Tenant behavior: every competitor is filtered by the active `agency_id`; restaurant-scoped memberships can list only their assigned restaurant.
+- Data behavior: reads stored competitor and observation records only. No scraping, external collection, AI generation, or fabricated competitor data.
+- Errors: `400` for invalid filters or location mismatch, `401` for missing context, `403` for invalid membership, and `404` when the selected restaurant is outside the active agency.
+
+### Create Competitor Observation
+
+`POST /api/competitors/:competitorId/observations`
+
+- Purpose: create one manual observation for an active competitor.
+- JSON inputs: `observedAt` in `YYYY-MM-DD` format, `channelSource`, `summary`, `sentiment`, `evidenceNote`, optional `sourceUrl`, and optional `signalType`.
+- Output: `{ data: CompetitorObservation }` with the saved observation date, channel/source, summary, sentiment, evidence note, source URL, and signal type.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: the competitor must belong to the active agency, and restaurant-scoped memberships can create observations only for their assigned restaurant.
+- Data behavior: stores user-entered observation text in the existing `CompetitorObservation` model. It does not create competitors, scrape sites, call provider APIs, generate AI output, or infer sentiment.
+- Errors: `400` for invalid JSON or invalid input, `401` for missing context, `403` for read-only roles, and `404` when the competitor is outside the active agency or not active.
+
+### Competitors Page
+
+`GET /competitors`
+
+- Purpose: select a restaurant, optional location, and competitor, then review or create manual observations.
+- The page shows observation date, channel/source, summary, sentiment, evidence note, source URL when provided, and safe empty/error states.
+- Viewer users can inspect permitted competitors and observations but cannot create new entries.
+
+---
+
+## AI Insight Generation APIs
+
+AI insight generation uses the existing server-side Google Gemini integration. It only uses explicitly selected imported reviews and stores generated output as draft evidence-linked insight records. It does not generate reports or competitor analysis.
+
+### Generate Draft Insights
+
+`POST /api/insights/generate`
+
+- Purpose: generate one or more draft AI insights from selected imported reviews.
+- JSON inputs: `restaurantId`, optional `locationId`, and `reviewIds` array with 1 to 50 review UUIDs.
+- Output: `{ data: Insight[] }` with `status = "DRAFT"`, model, prompt version, generated timestamp, confidence when returned, confidence level, source review count, and linked source reviews.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: every selected review must belong to the active agency, selected restaurant, optional location, and an approved review source.
+- Evidence behavior: every stored insight creates `InsightSourceReview` rows for the source reviews Gemini referenced, with excerpts copied from stored review text.
+- Model behavior: generation uses `gemini-3.5-flash` first and retries once with the stable fallback `gemini-3.1-flash-lite` only when Gemini returns a transient 5xx or high-demand response. Stored insight metadata records the model that successfully generated the draft.
+- Errors: `400` for invalid input or selected reviews outside the tenant/restaurant/source scope, `401` for missing context, `403` for read-only roles, `500` for missing `GOOGLE_AI_API_KEY`, and `502` for Gemini failures.
+
+### Review Insight Status
+
+`PATCH /api/insights/:insightId`
+
+- Purpose: apply human review by approving or rejecting an AI insight.
+- JSON inputs: `status` as `APPROVED` or `REJECTED`, plus optional `reviewNotes`.
+- Output: `{ data: Insight }` with reviewer, review timestamp, approval status, and source evidence.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Approval behavior: only `DRAFT` insights can be approved or rejected. Approved and rejected insights are locked for auditability, and approval requires at least one linked source review.
+- Audit behavior: approval and rejection store the reviewer, decision timestamp, status, and optional decision note on the insight record.
+- Report behavior: only `APPROVED` insights are eligible for report snapshots. Draft and rejected insights are excluded from report creation.
+- Errors: `400` for invalid input, missing source evidence, or attempts to edit a reviewed insight, `401` for missing context, `403` for read-only roles, and `404` when the insight is outside the active agency.
+
+### AI Insight Review Page
+
+`GET /insights`
+
+- Purpose: review generated insight text, confidence, approval status, model metadata, source review count, and supporting review excerpts.
+- Users with insight permissions can select approved imported reviews and generate new draft insights from that selected evidence.
+- The page displays clear Draft, Approved, and Rejected badges, reviewer details when available, decision timestamps, decision notes, and future report eligibility.
+- Viewer users can inspect permitted insight evidence but cannot generate, approve, or reject insights.
+
+---
+
+## Reports APIs
+
+Reports use the existing Prisma `Report` model and store an HTML-ready snapshot in `sections` with the selected filters in `filters`. This slice does not generate PDF or CSV files.
+
+### Check Report Eligibility
+
+`GET /api/reports`
+
+- Purpose: check whether a selected restaurant, optional location, and date range has approved insights available for report creation.
+- Query inputs: `restaurantId`, optional `locationId`, `dateRangeStart`, and `dateRangeEnd` in `YYYY-MM-DD` format.
+- Output: `{ data: { approvedInsightCount, excludedDraftRejectedInsightCount, exportBlocked, message } }`.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: the selected restaurant and optional location must belong to the active agency, and restaurant-scoped memberships can check reports only for their assigned restaurant.
+- Insight behavior: `approvedInsightCount` counts only `APPROVED` insights with linked source reviews in scope; `excludedDraftRejectedInsightCount` counts matching `DRAFT` and `REJECTED` insights that remain excluded from report export.
+- Errors: `400` for invalid inputs, invalid date order, or location mismatch; `401` for missing context; `403` for read-only roles or out-of-scope restaurant access; `404` when the restaurant is outside the active agency.
+
+### Create Approved Insight Report
+
+`POST /api/reports`
+
+- Purpose: create a tenant-scoped report snapshot from approved insights only.
+- JSON inputs: `restaurantId`, optional `locationId`, `dateRangeStart`, and `dateRangeEnd` in `YYYY-MM-DD` format.
+- Output: `{ data: Report }` with `status = "READY"`, `approvedOnly = true`, selected restaurant/location/date filters, approved insight summaries, approved and excluded draft/rejected insight counts, source review counts, and supporting source metadata.
+- Auth: Owner, Admin, Manager, or Analyst in the active agency. Viewer is read-only.
+- Tenant behavior: the selected restaurant and optional location must belong to the active agency, and restaurant-scoped memberships can create reports only for their assigned restaurant.
+- Insight behavior: only `APPROVED` insights are selected. Draft, rejected, archived, and deleted insights are excluded.
+- Evidence behavior: every linked source review for an included insight must match the selected restaurant, optional location, and review publication date range.
+- Export behavior: no PDF or CSV file is generated; `fileUrl` and `storageKey` remain empty.
+- Errors: `400` for invalid inputs, invalid date order, location mismatch, or blocked export when no approved insights match the filters; `401` for missing context; `403` for read-only roles or out-of-scope restaurant access; `404` when the restaurant is outside the active agency.
+
+### Reports Page
+
+`GET /reports`
+
+- Purpose: select a restaurant, optional location, and date range, then create a stored report from approved insight summaries and source counts.
+- The page shows approved insight count, excluded draft/rejected insight count, and user-safe export-blocking messaging for the selected filters.
+- The page lists recent stored reports with status, selected scope, date range, approved insight count, excluded draft/rejected insight count, and source review count.
+- Viewer users can inspect stored reports but cannot create new reports.
+
+### Report Detail Page
+
+`GET /reports/:reportId`
+
+- Purpose: show one stored report snapshot with selected filters, overview counts, approved insight summaries, and linked source review evidence.
+- Tenant behavior: the report must belong to the active agency, and restaurant-scoped memberships can open only reports for their assigned restaurant.
+- Draft and rejected insights are not shown in report details because they are excluded at report creation; stored detail snapshots show the count that was excluded.
+
+---
+
 ## AI Principles
 
 - AI assists users; it does not replace human decision-making.
@@ -166,6 +430,17 @@ During development:
 - Do not make authentication or tenant logic changes without approval.
 - Do not add dependencies without approval.
 - Do not change data collection rules or AI insight behavior without approval.
+
+After every push to GitHub, spawn or run a security-audit subagent before opening or merging a PR. The audit must check the pushed diff for private information, secrets, API keys, database URLs, service-role keys, tokens, personal data, accidental .env commits, generated files, and unrelated coursework artifacts. The audit must report pass/fail, list files checked, list any findings, and recommend immediate remediation before merge.
+
+Post-push security audit checklist:
+
+- Check git diff against origin branch.
+- Search for common secrets: `GOOGLE_AI_API_KEY`, `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `AUTH_SESSION_SECRET`, `github_pat_`, `sk-`, and `AIza`.
+- Confirm `.env` is ignored.
+- Confirm no screenshots expose secrets.
+- Confirm no unrelated Popstop/Videoreport files are committed to the Restaurant Intelligence repo.
+- Confirm only intended files changed.
 
 ---
 
